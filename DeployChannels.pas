@@ -1,6 +1,8 @@
 unit DeployChannels;
 
 interface
+uses
+  System.SysUtils, System.Classes;
 
 type
   IDeployChannelBasic = interface
@@ -29,6 +31,7 @@ type
     function CleanChannel: boolean;
     function DeployFile(const localName: string; const remoteDir: string;
                         const operation: Integer; const remoteName: string):boolean;
+    function RetrieveResult(const localFolder: string):boolean;
     procedure CloseChannel;
   end;
 
@@ -52,13 +55,15 @@ type
     function GetLogExceptions: boolean;
   end;
 
+  TProjectType = (ptApp, ptInstaller);
+
   TPAClientChannel = class(TDeployBaseChannel, IDeployChannel)
   private
     fRemoteProfile,
     fPAClientPath,
     fDelphiVersion,
     fPlatfrom: string;
-    function CallPAClient(const aCommand: string): Boolean;
+    function CallPAClient(const aCommand: string; OnFinished: TProc<TStringList> = nil): Boolean;
   public
     constructor Create (const newRemoteProfile: string; const newPAClientPAth: string;
                         const newDelphiVersion: string; const newPlatform: string);
@@ -67,6 +72,13 @@ type
     function DeployFile(const localName: string; const remoteDir: string;
                         const operation: Integer; const remoteName: string):boolean;
     procedure CloseChannel;
+    function CodeSignApp(const projectRoot, developerCertificateName, projectName:
+        string): boolean;
+    function CodeSignInstaller(const projectRoot, developerCertificateName, projectName: string): boolean;
+    function CreateInstaller(const projectRoot, projectName, CertificateNameInstaller: string): boolean;
+    function Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
+        localPath, optionalNotarizationParam: string; projectType: TProjectType): boolean;
+    function RetrieveResult(const localFolder: string):boolean;
   end;
 
   TFolderChannel = class(TDeployBaseChannel, IDeployChannel)
@@ -82,23 +94,31 @@ type
     function DeployFile(const localName: string; const remoteDir: string;
                         const operation: Integer; const remoteName: string):boolean;
     procedure CloseChannel;
+    function RetrieveResult(const localFolder: string):boolean;
   end;
 
 implementation
 
 uses
-	System.SysUtils, System.Win.Registry, Winapi.Windows, System.Classes, System.IOUtils;
+	System.Win.Registry, Winapi.Windows, System.IOUtils, StrUtils;
 
 const
   // Paclient commands and the parameters to be substituted
-  PACLIENT_CLEAN = '--Clean="%s,%s"';     //0 - project root name, 1 - path to a temp file with containing a list of files
-  PACLIENT_PUT   = '--put="%s,%s,%d,%s"'; //0 - local name, 1 - remote path, 2 - operation, 3 - remote name
+  PACLIENT_CLEAN            = '--Clean="%s,%s"';     //0 - project root name, 1 - path to a temp file with containing a list of files
+  PACLIENT_PUT              = '--put="%s,%s,%d,%s"'; //0 - local name, 1 - remote path, 2 - operation, 3 - remote name
+  PACLIENT_CODE_SIGN_APP    = '--codesign="%s,%s,%s\..\%s.entitlements,1"'; //0 - project root name, 1 - project root name, 2 - project root no extension
+  PACLIENT_CODE_SIGN_INST   = '--codesign="%s,%s"'; //0 - project root name, 1 - project root name, 2 - project root no extension
+  PACLIENT_NOTARIZE_SIG     = '--notarizeapp="%s,%s,%s,%s,''%s'',''%s._@emb_requestuuid.tmp'',''%s._@emb_.token.tmp''"';
+  PACLIENT_NOTARIZE_DO      = '--notarizationinfo="%s,%s,%s,20,''%s._@emb_.token.tmp''"';
+  PACLIENT_NOTARIZE_STAPLE_APP   = '--stapleapp="%s,%s.zip"';
+  PACLIENT_NOTARIZE_STAPLE_INST  = '--stapleapp="%s"';
+  PACLIENT_RETRIEVE_DIR     = '--get=".\*.*,%s"'; //0 - local name, 1 - remote path, 2 - operation, 3 - remote name
 
-{ TPAClientChannel }
+  { TPAClientChannel }
 
 // Execute the PaClient.exe app and pass it the command and profile
 // Filter some of the paclient output by capturing the out and err pipes
-function TPAClientChannel.CallPAClient(const aCommand: string): Boolean;
+function TPAClientChannel.CallPAClient(const aCommand: string; OnFinished: TProc<TStringList>): Boolean;
 var
   Security           : TSecurityAttributes;
   PipeRead, PipeWrite: THandle;
@@ -112,7 +132,6 @@ var
   fullProcessPath    : string;
 begin
   Result := false;
-
   // Create a pipe to capture the output
   Security.nLength              := SizeOf(TSecurityAttributes);
   Security.bInheritHandle       := true;
@@ -133,38 +152,41 @@ begin
     StartInfo.hStdOutput  := PipeWrite;
     StartInfo.hStdError   := PipeWrite;
     StartInfo.dwFlags     := STARTF_USESTDHANDLES;  // use output redirect pipe
-
     fullProcessPath:='"'+fPaclientPath+'"' + ' ' + aCommand + ' "' + fRemoteProfile+'"';
     if fVerbose then
       Writeln('Full Command Line: '+fullProcessPath);
-
     if CreateProcess(nil, PChar(fullProcessPath), nil, nil, true,
                           CREATE_NO_WINDOW, nil, nil, StartInfo, ProcInfo) then
+    begin
+      Output := TStringList.Create;
       try
         WaitForSingleObject(ProcInfo.hProcess, Infinite);
         // The process has finished, so close the write pipe and read the output
         CloseHandle(PipeWrite);
         ZeroMemory(@Buffer, Length(Buffer));
         ReadFile(PipeRead, Buffer[0], Length(Buffer), BytesInPipe, nil);
+
         // Parse the output, delete the first 4 lines, that are not very useful, and display the rest indented
-        Output := TStringList.Create;
-        try
-          Output.Text:=String(Buffer);
-          Output.Delete(0); Output.Delete(0); Output.Delete(0); Output.Delete(0);
-          for I := 0 to Output.Count - 1 do
-            WriteLn('  ' + Output[I]);
-        finally
-          Output.Free;
-        end;
+        Output.Text:=String(Buffer);
+        Output.Delete(0); Output.Delete(0); Output.Delete(0); Output.Delete(0);
+        for I := 0 to Output.Count - 1 do
+          WriteLn('  ' + Output[I]);
 
         // Check the exit code of paclient.exe / 0 is success
         Result := GetExitCodeProcess(ProcInfo.hProcess, ExCode) and (ExCode = 0);
       finally
         CloseHandle(ProcInfo.hProcess);
         CloseHandle(ProcInfo.hThread);
+
+        if Assigned(OnFinished) then
+          OnFinished(OutPut);
+
+        Output.Free;
       end;
+    end;
   finally
     CloseHandle(PipeRead);
+
     {$IFNDEF  DEBUG}  // The PipeWrite handle is closed twice,
                       //which is acceptable in Release,
                       //but raises exceptions when running with the debugger
@@ -175,12 +197,11 @@ end;
 
 function TPAClientChannel.CleanChannel: boolean;
 begin
-  result:=CallPaclient(Format(PACLIENT_CLEAN, [fProjectRoot, fFileListName]));
+  result:=CallPaclient(Format(PACLIENT_CLEAN, ['', fFileListName]));
 end;
 
 procedure TPAClientChannel.CloseChannel;
 begin
-
 end;
 
 constructor TPAClientChannel.Create(const newRemoteProfile, newPAClientPAth,
@@ -200,6 +221,95 @@ begin
                               operation, remoteName]));
 end;
 
+function TPAClientChannel.CodeSignApp(const projectRoot,
+    developerCertificateName, projectName: string): boolean;
+begin
+  var sep := QuotedStr(developerCertificateName);
+  var p := Format(PACLIENT_CODE_SIGN_APP, [ProjectRoot, sep, ProjectRoot, projectName]);
+  result := CallPaclient(p);
+end;
+
+function TPAClientChannel.CodeSignInstaller(const projectRoot,
+    developerCertificateName, projectName: string): boolean;
+begin
+  var sep := QuotedStr(developerCertificateName);
+  var p := Format(PACLIENT_CODE_SIGN_INST, [ProjectRoot, sep]);
+  result := CallPaclient(p);
+end;
+
+function TPAClientChannel.CreateInstaller(const projectRoot, projectName, CertificateNameInstaller: string): boolean;
+begin
+  var p := string.Format('--productbuild="%s,/Applications,%s.pkg,''%s''"',[ProjectRoot, ProjectName, CertificateNameInstaller]);
+  result := CallPaclient(p);
+end;
+
+function TPAClientChannel.Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
+  localPath, optionalNotarizationParam: string; projectType: TProjectType): boolean;
+begin
+  var p := string.Format(PACLIENT_NOTARIZE_SIG, [projectRoot, projectName, appleId, appSpecificPwEncoded, optionalNotarizationParam, localPath, localPath]);
+  Writeln('');
+  var notarizationUUID := '';
+  result := CallPaclient(p,
+  procedure (Output: TStringList)
+  begin
+    // Retrieve RequestUUID from the console output. Not from the temp txt file, was also a posibility.
+    var tmpFileName := TPath.Combine(GetCurrentDir(), projectName + '._@emb_requestuuid.tmp');
+    if FileExists(tmpFileName) then
+    begin
+      TFile.Delete(tmpFileName);
+      Writeln('Deleted temp file: ' + tmpFileName);
+    end;
+
+    for var i:=0 to Output.Count - 1 do
+    begin
+      if ContainsText(Output.Strings[i], 'RequestUUID:') then
+      begin
+        var p := Pos(':', Output.Strings[i]);
+        notarizationUUID := Copy(Output.Strings[i], p + 1, Length(Output.Strings[i]) - p + 1);
+        notarizationUUID := Trim(notarizationUUID);
+        Writeln('UUID=' + notarizationUUID);
+        break;
+      end;
+    end;
+  end);
+
+  if (not result) or (notarizationUUID = '') then
+    Exit;
+
+  var notarizeDo:= string.Format(PACLIENT_NOTARIZE_DO, [notarizationUUID, appleId, appSpecificPwEncoded, localPath]);
+  result := CallPaclient(notarizeDo,
+  procedure (Output: TStringList)
+  begin
+    for var i:=0 to Output.Count - 1 do
+    begin
+      Writeln(output[i]);
+    end;
+  end);
+
+  if not result then
+    Exit;
+
+  var staple := '';
+  if ProjectType = TProjectType.ptApp then
+    staple := string.Format(PACLIENT_NOTARIZE_STAPLE_APP,[projectRoot, projectName])
+  else
+    staple := string.Format(PACLIENT_NOTARIZE_STAPLE_INST,[projectRoot]);
+
+  result := CallPaclient(staple,
+  procedure (Output: TStringList)
+  begin
+    for var i:=0 to Output.Count - 1 do
+    begin
+      Writeln(output[i]);
+    end;
+  end);
+
+end;
+
+function TPAClientChannel.RetrieveResult(const localFolder: string): boolean;
+begin
+  result:=CallPaclient(Format(PACLIENT_RETRIEVE_DIR, [localFolder]));
+end;
 
 // Check if there is a remote profile and try to find one. Must be after the project is parsed
 procedure TPAClientChannel.SetupChannel;
@@ -299,6 +409,11 @@ begin
    Source.Free;
  end;
 
+end;
+
+function TFolderChannel.RetrieveResult(const localFolder: string): boolean;
+begin
+  result := True;
 end;
 
 procedure TFolderChannel.SetupChannel;
