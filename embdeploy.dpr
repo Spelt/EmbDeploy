@@ -52,6 +52,8 @@ begin
   ShowParam('-binaryFolder "folder"','The folder for the binary files. If not provided, the default location is assumed');
   ShowParam('-logExceptions','Logs any exceptions and quits instead of raising them');
 
+  ShowParam('-codeSign', 'Code sign and notarize the deployment.');
+
   ShowParam('-appleId "name"',' You can find it in Project options - Deployment - Provisioning - Release Build type: Developer ID."');
   ShowParam('-appSpecificPassswordEncoded "name"','You can find it in the ouput of a manual deploy command from within the IDE. Its very long 204 chars."');
   ShowParam('-notarizationExtraOptions "name"','You can find it in Project options - Deployment - Provisioning - Release Build type: Developer ID."');
@@ -60,6 +62,9 @@ begin
   ShowParam('-batchCmdFileAfterDeploy "command script file"', 'Same as cmd but points to a relative or absolute script file and it is fired AFTER code signing and notarizing the project. ' +
                                  'The command only must be enclosed with double quotes. An inline quote needs to be escaped.');
   ShowParam('-dumpRemoteResultDir "name"','A local directory relative to the project folder in which to dump the whole resulting deployment including code signing and notarization.');
+  ShowParam('-dumpSepFilenames "name"','Used with -dumpRemoteResultDir. Define here a list of files like "file1.pkg;file2.zip"');
+
+
 end;
 
 // Check if the valid combination of parameters is passed
@@ -118,6 +123,8 @@ begin
         Deployer.RegisterPACLient;
       if FindCmdLineSwitch('registerFolder', Param) then
         Deployer.RegisterFolder(Param, TPath.GetFileNameWithoutExtension(Project));
+
+      Deployer.CodeSign := FindCmdLineSwitch('codeSign');
       if FindCmdLineSwitch('certificateNameDeveloper', Param) then
         Deployer.CertNameDev := param;
       if FindCmdLineSwitch('certificateNameInstaller', Param) then
@@ -131,6 +138,8 @@ begin
         Deployer.NotarizationExtraOptions := param;
       end;
 
+      Deployer.ParseProject(Project);
+
       // Deploy the project
       if FindCmdLineSwitch('deploy') then
       begin
@@ -139,12 +148,12 @@ begin
       end;
 
       // Codesign the project
-      if FindCmdLineSwitch('certificateNameDeveloper') then
+      if Deployer.CodeSign then
       begin
         Deployer.CodeSignProject();
         Writeln('CodeSigning project complete');
 
-        Deployer.NotarizeProject();
+ //       Deployer.NotarizeProject();
         Writeln('Notarizing project complete');
       end;
 
@@ -163,7 +172,7 @@ begin
         Deployer.CodeSignInstaller();
         Writeln('Codesigning installer complete');
 
-        Deployer.NotarizeInstaller();
+   //     Deployer.NotarizeInstaller();
         Writeln('Notarizing installer complete');
       end;
 
@@ -183,7 +192,11 @@ begin
 
       if FindCmdLineSwitch('dumpRemoteResultDir', Param) then
       begin
-        Deployer.DumpRemoteDirectory(Project, Param);
+        var sepFiles:= '.\*';
+        var Param2 : string;
+        if FindCmdLineSwitch('dumpSepFilenames', Param2) then
+          sepfiles := Param2;
+        Deployer.DumpRemoteDirectory(Project, Param, sepFiles);
         Writeln('Remote result directory dumped.');
       end;
 
@@ -201,7 +214,7 @@ begin
   end;
 
  {$IFDEF DEBUG}
-  Sleep(60000);
+ // Sleep(60000);
  {$ENDIF}
 
 end.

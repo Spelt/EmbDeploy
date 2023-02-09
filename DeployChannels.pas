@@ -31,7 +31,7 @@ type
     function CleanChannel: boolean;
     function DeployFile(const localName: string; const remoteDir: string;
                         const operation: Integer; const remoteName: string):boolean;
-    function RetrieveResult(const localFolder: string):boolean;
+    function RetrieveResult(const SepFiles, localFolder: string):boolean;
     procedure CloseChannel;
   end;
 
@@ -78,7 +78,7 @@ type
     function CreateInstaller(const projectRoot, projectName, CertificateNameInstaller: string): boolean;
     function Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
         localPath, optionalNotarizationParam: string; projectType: TProjectType): boolean;
-    function RetrieveResult(const localFolder: string):boolean;
+    function RetrieveResult(const SepFiles, localFolder: string):boolean;
   end;
 
   TFolderChannel = class(TDeployBaseChannel, IDeployChannel)
@@ -94,7 +94,7 @@ type
     function DeployFile(const localName: string; const remoteDir: string;
                         const operation: Integer; const remoteName: string):boolean;
     procedure CloseChannel;
-    function RetrieveResult(const localFolder: string):boolean;
+    function RetrieveResult(const SepFiles, localFolder: string):boolean;
   end;
 
 implementation
@@ -104,15 +104,15 @@ uses
 
 const
   // Paclient commands and the parameters to be substituted
-  PACLIENT_CLEAN            = '--Clean="%s,%s"';     //0 - project root name, 1 - path to a temp file with containing a list of files
-  PACLIENT_PUT              = '--put="%s,%s,%d,%s"'; //0 - local name, 1 - remote path, 2 - operation, 3 - remote name
-  PACLIENT_CODE_SIGN_APP    = '--codesign="%s,%s,%s\..\%s.entitlements,1"'; //0 - project root name, 1 - project root name, 2 - project root no extension
-  PACLIENT_CODE_SIGN_INST   = '--codesign="%s,%s"'; //0 - project root name, 1 - project root name, 2 - project root no extension
+  PACLIENT_CLEAN            = '--Clean="%s,%s"';
+  PACLIENT_PUT              = '--put="%s,%s,%d,%s"';
+  PACLIENT_CODE_SIGN_APP    = '--codesign="%s,%s,%s\..\%s.entitlements,1"';
+  PACLIENT_CODE_SIGN_INST   = '--codesign="%s,%s"';
   PACLIENT_NOTARIZE_SIG     = '--notarizeapp="%s,%s,%s,%s,''%s'',''%s._@emb_requestuuid.tmp'',''%s._@emb_.token.tmp''"';
   PACLIENT_NOTARIZE_DO      = '--notarizationinfo="%s,%s,%s,20,''%s._@emb_.token.tmp''"';
   PACLIENT_NOTARIZE_STAPLE_APP   = '--stapleapp="%s,%s.zip"';
   PACLIENT_NOTARIZE_STAPLE_INST  = '--stapleapp="%s"';
-  PACLIENT_RETRIEVE_DIR     = '--get=".\*.*,%s"'; //0 - local name, 1 - remote path, 2 - operation, 3 - remote name
+  PACLIENT_RETRIEVE_FILES     = '--get="%s,%s"'; //0 - local name, 1 - remote path, 2 - operation, 3 - remote name
 
   { TPAClientChannel }
 
@@ -306,9 +306,23 @@ begin
 
 end;
 
-function TPAClientChannel.RetrieveResult(const localFolder: string): boolean;
+function TPAClientChannel.RetrieveResult(const SepFiles, localFolder: string): boolean;
 begin
-  result:=CallPaclient(Format(PACLIENT_RETRIEVE_DIR, [localFolder]));
+  // like: .\Boxoffice.app.zip;.\Boxoffice.pkg
+  result := false;
+  var f:=TStringList.Create();
+  try
+    f.Delimiter := ';';
+    f.StrictDelimiter := true;
+    f.DelimitedText := sepFiles;
+    for var i := 0 to f.Count - 1 do
+    begin
+      var s := string.Format('.\%s',[f[i]]);
+      result:=CallPaclient(Format(PACLIENT_RETRIEVE_FILES, [s, localFolder]));
+    end;
+  finally
+    f.Free;
+  end;
 end;
 
 // Check if there is a remote profile and try to find one. Must be after the project is parsed
@@ -411,7 +425,7 @@ begin
 
 end;
 
-function TFolderChannel.RetrieveResult(const localFolder: string): boolean;
+function TFolderChannel.RetrieveResult(const SepFiles, localFolder: string): boolean;
 begin
   result := True;
 end;

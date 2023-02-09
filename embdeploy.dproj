@@ -5,7 +5,7 @@
         <FrameworkType>None</FrameworkType>
         <MainSource>embdeploy.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Console</AppType>
@@ -206,12 +206,11 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <PostBuildEventCancelOnError>false</PostBuildEventCancelOnError>
-        <PostBuildEvent><![CDATA[]]></PostBuildEvent>
         <DCC_UsePackage>FlexCel_Core;DBXSqliteDriver;frxDB18;FMXfrx18;fmx;IndySystem;TeeDB;frx18;inetdbbde;vclib;DBXInterBaseDriver;DataSnapClient;DataSnapCommon;DataSnapServer;unidacvcl180;DataSnapProviderClient;VCL_FlexCel_Components_DESIGN;DBXSybaseASEDriver;IcsVclDXE4Run;DbxCommonDriver;VCL_FlexCel_Components;vclimg;dbxcds;DatasnapConnectorsFreePascal;MetropolisUILiveTile;vcldb;vcldsnap;IcsFmxDXE4Run;dacvcl180;DBXDb2Driver;OmniThreadLibraryRuntimeXE3;DBXOracleDriver;CustomIPTransport;vclribbon;dsnap;IndyIPServer;fmxase;vcl;IndyCore;FMXfs18;IndyIPCommon;CloudService;DBXMSSQLDriver;FmxTeeUI;CodeSiteExpressPkg;FMX_FlexCel_Core;TMSFMXPackPkgDXE4;inetdbxpress;webdsnap;FMX_FlexCel_Components_DESIGN;FMXfrxe18;unidac180;adortl;madBasic_;FMXfrxTee18;bindcompfmx;tmsdXE4;FMXfrxDB18;vcldbx;rtl;dbrtl;DbxClientDriver;bindcomp;inetdb;Tee;DBXOdbcDriver;FlexCel_Render;madDisAsm_;xmlrtl;svnui;ibxpress;IndyProtocols;DBXMySQLDriver;frxe18;vclactnband;bindengine;soaprtl;bindcompdbx;FMXTee;TeeUI;bindcompvcl;VCL_FlexCel_Core;FlexCel_Pdf;vclie;FMX_FlexCel_Components;IcsCommonDXE4Run;vcltouch;madExcept_;tmsexdXE4;crcontrols180;FMXfsDB18;VclSmp;DBXInformixDriver;Intraweb;DataSnapConnectors;dsnapcon;DBXFirebirdDriver;tmsxlsdXE4;inet;fmxobj;dac180;vclx;svn;DBXSybaseASADriver;FMXfsTee18;fmxdae;FlexCel_XlsAdapter;bdertl;VirtualTreesR;dbexpress;DataSnapIndy10ServerTransport;IndyIPClient;$(DCC_UsePackage)</DCC_UsePackage>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <DCC_ConsoleTarget>true</DCC_ConsoleTarget>
-        <Debugger_RunParams>-verbose -platform OSX64 -dumpRemoteResultDir &quot;../macDeploy&quot;  -batchCmdFileAfterDeploy &quot;../Installers/mac/Scripts/BoxOffice-Jenkins.txt&quot;  -registerPAClient -certificateNameDeveloper &quot;Developer ID Application: Cramgo BV (FZRAYS6PHS)&quot; -certificateNameInstaller &quot;Developer ID Installer: Cramgo BV (FZRAYS6PHS)&quot; -appleId &quot;espelt@cramgo.nl&quot; -appSpecificPassswordEncoded &quot;?????&quot;-notarizationExtraOptions &quot;--timestamp --options=runtime&quot; -deploy &quot;Boxoffice.dproj&quot;</Debugger_RunParams>
+        <Debugger_RunParams>-verbose -platform OSX64 -dumpRemoteResultDir &quot;..\macDeploy&quot; -dumpSepFilenames &quot;Boxoffice.app.zip;Boxoffice.pkg&quot; -batchCmdFileAfterDeploy &quot;../Installers/mac/Scripts/BoxOffice-Jenkins.txt&quot;  -registerPAClient -certificateNameDeveloper &quot;Developer ID Application: Cramgo BV (FZRAYS6PHS)&quot; -certificateNameInstaller &quot;Developer ID Installer: Cramgo BV (FZRAYS6PHS)&quot; -appleId &quot;espelt@cramgo.nl&quot; -appSpecificPassswordEncoded &quot;853F47C85F980780CF3CE532A4577BB6E456080C7EB9ECA09F177775D849A8A7A5EE5D147F731C61C1BD5765FAB3C363BAB3361C04652294162B458CE5F52284C946F35DD545FA95BFA2AF3F072C1D0A92003E071DBA097BE3FD16D14425789365CA9A8422F1&quot; -notarizationExtraOptions &quot;--timestamp --options=runtime&quot;   -project &quot;Boxoffice.dproj&quot;</Debugger_RunParams>
         <Debugger_CWD>C:\Dev\Delphi\boxoffice-3-developer\client-side\boxoffice</Debugger_CWD>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
     </PropertyGroup>
@@ -231,7 +230,6 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <DCC_MapFile>3</DCC_MapFile>
-        <DCC_Define>EUREKALOG;EUREKALOG_VER7;$(DCC_Define)</DCC_Define>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
     </PropertyGroup>
@@ -249,6 +247,7 @@
         <VerInfo_MinorVer>3</VerInfo_MinorVer>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Debugger_CWD>C:\Dev\Delphi\boxoffice-3-developer\client-side\boxoffice</Debugger_CWD>
+        <Debugger_RunParams>-verbose -platform OSX64 -dumpRemoteResultDir &quot;..\macDeploy&quot;  -batchCmdFileAfterDeploy &quot;../Installers/mac/Scripts/BoxOffice-Jenkins.txt&quot;  -registerPAClient -certificateNameDeveloper &quot;Developer ID Application: Cramgo BV (FZRAYS6PHS)&quot; -certificateNameInstaller &quot;Developer ID Installer: Cramgo BV (FZRAYS6PHS)&quot; -appleId &quot;espelt@cramgo.nl&quot; -appSpecificPassswordEncoded &quot;853F47C85F980780CF3CE532A4577BB6E456080C7EB9ECA09F177775D849A8A7A5EE5D147F731C61C1BD5765FAB3C363BAB3361C04652294162B458CE5F52284C946F35DD545FA95BFA2AF3F072C1D0A92003E071DBA097BE3FD16D14425789365CA9A8422F1&quot; -notarizationExtraOptions &quot;--timestamp --options=runtime&quot;   -project &quot;Boxoffice.dproj&quot;</Debugger_RunParams>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -1087,20 +1086,4 @@
     <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
     <Import Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj" Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')"/>
     <Import Project="$(MSBuildProjectName).deployproj" Condition="Exists('$(MSBuildProjectName).deployproj')"/>
-    <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win32'">
-        <PreBuildEvent/>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent><![CDATA[]]></PostBuildEvent>
-        <PostBuildEventIgnoreExitCode>True</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win32'">
-        <PreBuildEvent/>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent><![CDATA[]]></PostBuildEvent>
-        <PostBuildEventIgnoreExitCode>True</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
 </Project>

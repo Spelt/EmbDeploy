@@ -81,8 +81,8 @@ type
     fProjectPath: string;
     fInstallerIsCreated: Boolean;
     fAppIsCodeSigned : Boolean;
+    fCodeSign: Boolean;
     procedure GetEmbarcaderoPaths;
-    procedure ParseProject(const aProjectPath: String);
     procedure SetupChannels;
     procedure SetConfig(const Value: String);
     function PlatFormNeedsCodeSigning():Boolean;
@@ -92,6 +92,8 @@ type
     destructor Destroy; override;
     procedure BundleProject(const aProjectPath, aZIPName: String);
     procedure DeployProject(const aProjectPath: String);
+    procedure ParseProject(const aProjectPath: String);
+
     procedure CodeSignProject();
     procedure NotarizeProject();
     procedure CreateInstallerProject();
@@ -100,7 +102,7 @@ type
 
     procedure ExecuteCommand(const aProjectPath, aCommand: String; const forcePlain: boolean = false);
     procedure ExecuteCommandFile(const aProjectPath, filename: String);
-    procedure DumpRemoteDirectory(const aProjectPath, directoryName: String);
+    procedure DumpRemoteDirectory(const aProjectPath, directoryName, sepFiles: String);
     procedure RegisterPACLient;
     procedure RegisterFolder(const regPath: string; const project: string);
     property Config       : String  read fConfig        write SetConfig;
@@ -111,6 +113,7 @@ type
     property Verbose      : boolean read fVerbose       write fVerbose;
     property BinaryFolder : string  read fBinaryFolder  write fBinaryFolder;
     property LogExceptions: Boolean read fLogExceptions write fLogExceptions;
+    property CodeSign     : Boolean read fCodeSign      write fCodeSign;
     property CertNameDev  : string read fCertNameDev write fCertNameDev;
     property AppleId      : string  read fAppleId       write fAppleId;
     property AppSpecificPwEncoded     : string read fAppSpecificPwEncoded     write fAppSpecificPwEncoded;
@@ -227,8 +230,6 @@ var
   S, TempFile: String;
   tmpChannel: IDeployChannel;
 begin
-
-  ParseProject(aProjectPath);
   SetupChannels;
   WriteLn(Format('Deploying %d files from project %s, config %s', [Length(fDeployFiles), aProjectPath, fConfig]));
   // Build a temp file list to clean the remote project folder
@@ -791,7 +792,7 @@ begin
   end;
 end;
 
-procedure TDeployer.DumpRemoteDirectory(const aProjectPath, directoryName: String);
+procedure TDeployer.DumpRemoteDirectory(const aProjectPath, directoryName, sepFiles: String);
 begin
   var dir := TPath.Combine(ProjectPath, directoryName);
   if TDirectory.Exists(dir) then
@@ -801,7 +802,7 @@ begin
   for var tmpChannel in fDeployChannels do
   begin
     if tmpChannel is TPAClientChannel then
-      if (not tmpChannel.RetrieveResult(dir)) and (not fIgnoreErrors) then
+      if (not tmpChannel.RetrieveResult(sepFiles, dir)) and (not fIgnoreErrors) then
         if fLogExceptions then
         begin
           Writeln('Error in '+tmpChannel.ChannelName+'. Command Error.');
