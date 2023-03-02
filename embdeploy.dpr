@@ -153,7 +153,7 @@ begin
         Deployer.CodeSignProject();
         Writeln('CodeSigning project complete');
 
- //       Deployer.NotarizeProject();
+        Deployer.NotarizeProject();
         Writeln('Notarizing project complete');
       end;
 
@@ -172,7 +172,7 @@ begin
         Deployer.CodeSignInstaller();
         Writeln('Codesigning installer complete');
 
-   //     Deployer.NotarizeInstaller();
+        Deployer.NotarizeInstaller();
         Writeln('Notarizing installer complete');
       end;
 

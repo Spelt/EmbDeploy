@@ -77,7 +77,7 @@ type
     function CodeSignInstaller(const projectRoot, developerCertificateName, projectName: string): boolean;
     function CreateInstaller(const projectRoot, projectName, CertificateNameInstaller: string): boolean;
     function Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
-        localPath, optionalNotarizationParam: string; projectType: TProjectType): boolean;
+        localPath, optionalNotarizationParam: string; projectType: TProjectType; const teamId: string): boolean;
     function RetrieveResult(const SepFiles, localFolder: string):boolean;
   end;
 
@@ -108,7 +108,7 @@ const
   PACLIENT_PUT              = '--put="%s,%s,%d,%s"';
   PACLIENT_CODE_SIGN_APP    = '--codesign="%s,%s,%s\..\%s.entitlements,1"';
   PACLIENT_CODE_SIGN_INST   = '--codesign="%s,%s"';
-  PACLIENT_NOTARIZE_SIG     = '--notarizeapp="%s,%s,%s,%s,''%s'',''%s._@emb_requestuuid.tmp'',''%s._@emb_.token.tmp''"';
+  PACLIENT_NOTARIZE_SIG     = '--notarizeapp="%s,%s,%s,%s,%s,,''%s'',''%s._@emb_requestuuid.tmp'',''%s._@emb_.token.tmp''"';
   PACLIENT_NOTARIZE_DO      = '--notarizationinfo="%s,%s,%s,20,''%s._@emb_.token.tmp''"';
   PACLIENT_NOTARIZE_STAPLE_APP   = '--stapleapp="%s,%s.zip"';
   PACLIENT_NOTARIZE_STAPLE_INST  = '--stapleapp="%s"';
@@ -244,9 +244,9 @@ begin
 end;
 
 function TPAClientChannel.Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
-  localPath, optionalNotarizationParam: string; projectType: TProjectType): boolean;
+  localPath, optionalNotarizationParam: string; projectType: TProjectType; const teamId: string): boolean;
 begin
-  var p := string.Format(PACLIENT_NOTARIZE_SIG, [projectRoot, projectName, appleId, appSpecificPwEncoded, optionalNotarizationParam, localPath, localPath]);
+  var p := string.Format(PACLIENT_NOTARIZE_SIG, [projectRoot, projectName, appleId, appSpecificPwEncoded, teamId, optionalNotarizationParam, localPath, localPath]);
   Writeln('');
   var notarizationUUID := '';
   result := CallPaclient(p,

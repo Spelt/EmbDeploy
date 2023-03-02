@@ -82,11 +82,13 @@ type
     fInstallerIsCreated: Boolean;
     fAppIsCodeSigned : Boolean;
     fCodeSign: Boolean;
+    fTeamId : string;
     procedure GetEmbarcaderoPaths;
     procedure SetupChannels;
     procedure SetConfig(const Value: String);
     function PlatFormNeedsCodeSigning():Boolean;
     function PlatFormNeedsInstaller: Boolean;
+    function ExtractTeamId(): string;
   public
     constructor Create(const aDelphiVersion: String);
     destructor Destroy; override;
@@ -199,6 +201,7 @@ begin
   fInstallerIsCreated := false;
   fAppIsCodeSigned := false;
   GetEmbarcaderoPaths;
+  fTeamId := '';
 end;
 
 // Produce a ZIP archive of the files to be deployed (useful to produce archives of the OSX .APP bundles on Win)
@@ -303,6 +306,21 @@ begin
   fAppIsCodeSigned := true;
 end;
 
+function TDeployer.ExtractTeamId(): string;
+begin
+  var p1 := Pos('(',fCertNameDev);
+  var p2 := Pos(')',fCertNameDev);
+  if (p1 = 0) or (p2 = 0) then
+    exit('');
+
+  result := Copy(fCertNameDev, p1+1, p2 - p1-1);
+
+
+
+
+
+end;
+
 procedure TDeployer.NotarizeProject();
 begin
   Writeln('Project notarization ' + fProjectName);
@@ -317,13 +335,15 @@ begin
       raise Exception.Create('Missing parameters: AppleId or AppSpecificPwEncoded. Deployment stopped.');
   end;
 
+  fTeamId := ExtractTeamId();
+
   for var tmpChannel in fDeployChannels do
   begin
     if not (tmpChannel is TPAClientChannel) then
       Continue;
     var channel := tmpChannel as TPAClientChannel;
     var localPath := string.format('%s\\%s', [ProjectPath, fProjectName]);
-    if (not channel.Notarize(fProjectRoot, fAppleId, fAppSpecificPwEncoded, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptApp))
+    if (not channel.Notarize(fProjectRoot, fAppleId, fAppSpecificPwEncoded, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptApp, fTeamId))
       and (not fIgnoreErrors) then
       if fLogExceptions then
       begin
@@ -406,7 +426,7 @@ begin
     var channel := tmpChannel as TPAClientChannel;
     var apkName := fProjectName + '.pkg';
     var localPath := string.format('%s\\%s', [ProjectPath, fProjectName]);
-    if (not channel.Notarize(apkName, fAppleId, fAppSpecificPwEncoded, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptInstaller)) and (not fIgnoreErrors) then
+    if (not channel.Notarize(apkName, fAppleId, fAppSpecificPwEncoded, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptInstaller, fTeamId)) and (not fIgnoreErrors) then
       if fLogExceptions then
       begin
         Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
