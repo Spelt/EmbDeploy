@@ -245,10 +245,9 @@ end;
 
 function TPAClientChannel.CreateNativeNotarizationScript(const AppleId, Password, TeamId, ProjectName: string): string;
 begin
-  //Executing:             /usr/bin/xcrun notarytool submit --apple-id "espelt@cramgo.nl" --password "*******************" --team-id "FZRAYS6PHS" --no-progress "/Users/activetickets/Desktop/Boxoffice.pkg"
-  result := string.Format('/usr/bin/xcrun notarytool submit --apple-id "%s" --password "%s" --team-id "%s" --no-progress "%s.pkg"',
+  result := string.Format('/usr/bin/xcrun notarytool submit --apple-id "%s" --password "%s" --team-id "%s" --no-progress "%s"',
     [AppleId, Password, TeamId, projectName]);
-  Writeln('Installer creation script: ' + result);
+  Writeln('Notarization script: ' + result);
 end;
 
 function TPAClientChannel.RetrieveResult(const SepFiles, localFolder: string): boolean;

@@ -325,7 +325,7 @@ begin
     var apkName := fProjectName + '.pkg';
     var localPath := string.format('%s\\%s', [ProjectPath, fProjectName]);
     begin
-      var script := channel.CreateNativeNotarizationScript(AppleId, fAppSpecificPassword, fTeamId, fProjectName);
+      var script := channel.CreateNativeNotarizationScript(AppleId, fAppSpecificPassword, fTeamId, apkName);
       ExecuteCommand('', script, false,
       procedure (Output: TStringList)
       begin
