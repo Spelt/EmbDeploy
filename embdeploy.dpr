@@ -65,6 +65,8 @@ begin
   ShowParam('-dumpSepFilenames "name"','Used with -dumpRemoteResultDir. Define here a list of files like "file1.pkg;file2.zip"');
 
 
+
+
 end;
 
 // Check if the valid combination of parameters is passed
@@ -131,8 +133,12 @@ begin
         Deployer.CertNameInstaller := param;
       if FindCmdLineSwitch('appleId', Param) then
         Deployer.AppleId := param;
-      if FindCmdLineSwitch('appSpecificPassswordEncoded', Param) then
+      if FindCmdLineSwitch('appSpecificPasswordEncoded', Param) then
         Deployer.AppSpecificPwEncoded := param;
+
+      if FindCmdLineSwitch('appSpecificPassword', Param) then
+        Deployer.AppSpecificPassword := param;
+
       if FindCmdLineSwitch('notarizationExtraOptions', Param) then
       begin
         Deployer.NotarizationExtraOptions := param;
@@ -143,18 +149,18 @@ begin
       // Deploy the project
       if FindCmdLineSwitch('deploy') then
       begin
-        Deployer.DeployProject(Project);
-        Writeln('Deployment complete');
+     //   Deployer.DeployProject(Project);
+      //  Writeln('Deployment complete');
       end;
 
       // Codesign the project
       if Deployer.CodeSign then
       begin
-        Deployer.CodeSignProject();
-        Writeln('CodeSigning project complete');
+        //Deployer.CodeSignProject();
+        //Writeln('CodeSigning project complete');
 
-        Deployer.NotarizeProject();
-        Writeln('Notarizing project complete');
+        //Deployer.NotarizeProject();
+        //Writeln('Notarizing project complete');
       end;
 
       if FindCmdLineSwitch('batchCmdFileAfterDeploy', Param) then
@@ -164,6 +170,7 @@ begin
       end;
 
       // Create an installer for the project
+
       if FindCmdLineSwitch('certificateNameInstaller') then
       begin
         Deployer.CreateInstallerProject();

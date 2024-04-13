@@ -1,0 +1,29 @@
+ide test param
+
+-verbose  -deploy -useNativeInstaller -platform OSX64 -profile "macPro-m2-Ed" -dumpRemoteResultDir "..\..\..\macDeploy" -codeSign -dumpSepFilenames "Boxoffice.app.zip;Boxoffice.pkg" -batchCmdFileAfterDeploy "../../../Installers/mac/Scripts/BoxOffice-Jenkins.txt"  -registerPAClient -certificateNameDeveloper "Developer ID Application: Cramgo BV (FZRAYS6PHS)" -certificateNameInstaller "Developer ID Installer: Cramgo BV (FZRAYS6PHS)" -appleId "espelt@cramgo.nl" -appSpecificPassword "owfl-ypbt-ljmy-oqnm" -appSpecificPasswordEncoded "853F47C85F980780CF3CE532A4577BB6E456080C7EB9ECA09F177775D849A8A7A5EE5D147F731C61C1BD5765FAB3C363BAB3361C04652294162B458CE5F52284C946F35DD545FA95BFA2AF3F072C1D0A92003E071DBA097BE3FD16D14425789365CA9A8422F1" -notarizationExtraOptions "--timestamp --options=runtime"   -project "Boxoffice.dproj"
+
+vanuit de IDE 12.1
+> command_line: "/usr/bin/plutil" -convert binary1 "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app/Contents/Info.plist"
+> command_line: "/usr/bin/codesign" -o runtime --timestamp --entitlements "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.entitlements" --deep -s "Developer ID Application: Cramgo BV (FZRAYS6PHS)" -f "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app"
+> command_line: "/usr/bin/ditto" -c -k --keepParent "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app" "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app.zip"
+> command_line: "/usr/bin/xcrun" notarytool submit "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app.zip" --apple-id "espelt@cramgo.nl" --password "paoj-gfup-lhsv-ydoh" --team-id FZRAYS6PHS
+> command_line: "/usr/bin/xcrun" notarytool info 24781ddb-5e3a-45c3-822e-84b52e4652c0 --apple-id "espelt@cramgo.nl" --password "paoj-gfup-lhsv-ydoh" --team-id FZRAYS6PHS
+> command_line: "/usr/bin/xcrun" stapler staple "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app"
+> command_line: "/usr/bin/ditto" -c -k --keepParent "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app" "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.zip"
+
+
+'--notarizationinfo="9dc5ada6-6312-470e-8df4-9e93f4423669,espelt@cramgo.nl,853F47C85F980780CF3CE532A4577BB6E456080C7EB9ECA09F177775D849A8A7A5EE5D147F731C61C1BD5765FAB3C363BAB3361C04652294162B458CE5F52284C946F35DD545FA95BFA2AF3F072C1D0A92003E071DBA097BE3FD16D14425789365CA9A8422F1,FZRAYS6PHS,20,''C:\Dev\Delphi\boxoffice-3-developer\client-side\boxoffice\src\project files\\Boxoffice._@emb_.token.tmp''"'
+
+vanuit mosco
+2024/04/13 16:12:25.345 Executing: /usr/bin/pkgbuild --root "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app" --install-location "/Applications/Boxoffice.app" --identifier "Boxoffice" --version "3.3.11" "/Applications/Boxoffice.app/Boxoffice.pkg"
+2024/04/13 16:12:29.693 Executing: /usr/bin/codesign --sign "Developer ID Installer: Cramgo BV (FZRAYS6PHS)" "/Applications/Boxoffice.app/Boxoffice.pkg" "/Applications/Boxoffice.app/BoxofficeSigned.pkg"
+2024/04/13 16:12:30.143 Executing: /usr/bin/xcrun notarytool submit --apple-id "espelt@cramgo.nl" --password "*******************" --team-id "FZRAYS6PHS" --no-progress "/Applications/Boxoffice.app/Boxoffice.pkg"
+2024/04/13 16:12:38.822 Executing: /usr/bin/xcrun notarytool info --apple-id "espelt@cramgo.nl" --password "*******************" --team-id "FZRAYS6PHS" 5723e58c-4113-4926-b1e9-68f23140f407
+2024/04/13 16:12:40.134 Notarization is in progress - sleeping for 30 seconds
+2024/04/13 16:13:10.141 Executing: /usr/bin/xcrun notarytool info --apple-id "espelt@cramgo.nl" --password "*******************" --team-id "FZRAYS6PHS" 5723e58c-4113-4926-b1e9-68f23140f407
+2024/04/13 16:13:11.384 Notarization is in progress - sleeping for 30 seconds
+2024/04/13 16:13:41.392 Executing: /usr/bin/xcrun notarytool info --apple-id "espelt@cramgo.nl" --password "*******************" --team-id "FZRAYS6PHS" 5723e58c-4113-4926-b1e9-68f23140f407
+2024/04/13 16:13:42.805 Notarization complete!
+2024/04/13 16:13:42.810 Executing: /usr/bin/xcrun stapler staple "/Applications/Boxoffice.app/Boxoffice.pkg"
+2024/04/13 16:13:43.068 Completed staple
+

@@ -75,14 +75,14 @@ type
     fReleaseExcludeFiles: TList<string>;
     fCertNameDev: string;
     fAppleId: string;
-    fAppSpecificPwEncoded: string;
     fCertNameInstaller: string;
     fNotarizationExtraOptions: string;
     fProjectPath: string;
     fInstallerIsCreated: Boolean;
     fAppIsCodeSigned : Boolean;
     fCodeSign: Boolean;
-    fTeamId : string;
+    fTeamId,
+    fAppSpecificPassword : string;
     procedure GetEmbarcaderoPaths;
     procedure SetupChannels;
     procedure SetConfig(const Value: String);
@@ -102,7 +102,7 @@ type
     procedure CodeSignInstaller();
     procedure NotarizeInstaller();
 
-    procedure ExecuteCommand(const aProjectPath, aCommand: String; const forcePlain: boolean = false);
+    procedure ExecuteCommand(const aProjectPath, aCommand: String; const forcePlain: boolean = false; OnFinished: TProc<TStringList> = nil);
     procedure ExecuteCommandFile(const aProjectPath, filename: String);
     procedure DumpRemoteDirectory(const aProjectPath, directoryName, sepFiles: String);
     procedure RegisterPACLient;
@@ -116,9 +116,11 @@ type
     property BinaryFolder : string  read fBinaryFolder  write fBinaryFolder;
     property LogExceptions: Boolean read fLogExceptions write fLogExceptions;
     property CodeSign     : Boolean read fCodeSign      write fCodeSign;
-    property CertNameDev  : string read fCertNameDev write fCertNameDev;
-    property AppleId      : string  read fAppleId       write fAppleId;
-    property AppSpecificPwEncoded     : string read fAppSpecificPwEncoded     write fAppSpecificPwEncoded;
+    property CertNameDev              : string read fCertNameDev    write fCertNameDev;
+    property AppleId                  : string read fAppleId        write fAppleId;
+    property AppSpecificPassword     : string read fAppSpecificPassword     write fAppSpecificPassword;
+
+
     property CertNameInstaller        : string read fCertNameInstaller        write fCertNameInstaller;
     property NotarizationExtraOptions : string read fNotarizationExtraOptions write fNotarizationExtraOptions;
     property ProjectPath              : string read fProjectPath              write fProjectPath;
@@ -314,25 +316,21 @@ begin
     exit('');
 
   result := Copy(fCertNameDev, p1+1, p2 - p1-1);
-
-
-
-
-
+  Writeln('Team id = ' + result);
 end;
 
 procedure TDeployer.NotarizeProject();
 begin
   Writeln('Project notarization ' + fProjectName);
-  if (fAppleId = '') or (fAppSpecificPwEncoded = '')  then
+  if fAppleId = '' then
   begin
     if fLogExceptions then
     begin
-      Writeln('Missing parameters: AppleId or AppSpecificPwEncoded. Deployment stopped.');
+      Writeln('Missing parameters: AppleId. Deployment stopped.');
       Halt(1);
     end
     else
-      raise Exception.Create('Missing parameters: AppleId or AppSpecificPwEncoded. Deployment stopped.');
+      raise Exception.Create('Missing parameters: AppleId. Deployment stopped.');
   end;
 
   fTeamId := ExtractTeamId();
@@ -343,7 +341,7 @@ begin
       Continue;
     var channel := tmpChannel as TPAClientChannel;
     var localPath := string.format('%s\\%s', [ProjectPath, fProjectName]);
-    if (not channel.Notarize(fProjectRoot, fAppleId, fAppSpecificPwEncoded, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptApp, fTeamId))
+    if (not channel.Notarize(fProjectRoot, fAppleId, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptApp, fTeamId))
       and (not fIgnoreErrors) then
       if fLogExceptions then
       begin
@@ -366,18 +364,10 @@ begin
   begin
     if not (tmpChannel is TPAClientChannel) then
       Continue;
-    var channel := tmpChannel as TPAClientChannel;
 
-    if (not channel.CreateInstaller(fProjectRoot, fProjectName, fCertNameInstaller)) and (not fIgnoreErrors) then
-    begin
-      if fLogExceptions then
-      begin
-        Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-        Halt(1);
-      end
-      else
-        raise Exception.Create('Error in '+ tmpChannel.ChannelName+'. Deployment stopped.');
-    end;
+    var channel := tmpChannel as TPAClientChannel;
+    var script := channel.CreateNativeInstallerScript(fProjectRoot, fProjectName);
+    ExecuteCommand('', script);
   end;
   fInstallerIsCreated := true;
 end;
@@ -408,6 +398,10 @@ end;
 procedure TDeployer.NotarizeInstaller();
 begin
   Writeln('Installer notarization ' + fProjectName);
+
+  if fTeamId = '' then
+    fTeamId := ExtractTeamId();
+
   if (fAppleId = '') or (fAppSpecificPwEncoded = '')  then
   begin
     if fLogExceptions then
@@ -423,17 +417,29 @@ begin
   begin
     if not (tmpChannel is TPAClientChannel) then
       Continue;
+
     var channel := tmpChannel as TPAClientChannel;
     var apkName := fProjectName + '.pkg';
     var localPath := string.format('%s\\%s', [ProjectPath, fProjectName]);
-    if (not channel.Notarize(apkName, fAppleId, fAppSpecificPwEncoded, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptInstaller, fTeamId)) and (not fIgnoreErrors) then
-      if fLogExceptions then
+    begin
+      var script := channel.CreateNativeNotarizationScript(AppleId, fAppSpecificPassword, fTeamId, fProjectName);
+      ExecuteCommand('', script, false,
+      procedure (Output: TStringList)
       begin
-        Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-        Halt(1);
-      end
-      else
-        raise Exception.Create('Error in '+ tmpChannel.ChannelName+'. Deployment stopped.');
+        var notarizationUUID:='';
+        for var i:=0 to Output.Count - 1 do
+        begin
+          if ContainsText(Output.Strings[i], 'RequestUUID:') then
+          begin
+            var p := Pos(':', Output.Strings[i]);
+            notarizationUUID := Copy(Output.Strings[i], p + 1, Length(Output.Strings[i]) - p + 1);
+            notarizationUUID := Trim(notarizationUUID);
+            Writeln('UUID=' + notarizationUUID);
+            break;
+          end;
+        end;
+      end);
+    end;
   end;
 end;
 
@@ -729,12 +735,12 @@ end;
 
 // Execute a custom command on the remote server
 // This is done by creating a temporary file with the command and executing it in the shell
-procedure TDeployer.ExecuteCommand(const aProjectPath, aCommand: String; const forcePlain: boolean);
+procedure TDeployer.ExecuteCommand(const aProjectPath, aCommand: String; const forcePlain: boolean; OnFinished: TProc<TStringList>);
 var
   Text, Cmd, TempFile:  String;
   tmpChannel: IDeployChannel;
 begin
-  ParseProject(aProjectPath);
+  //ParseProject(aProjectPath);
 
   // Check if there is a remote profile and try to find one. Must be after the project is parsed
   SetupChannels;
@@ -760,14 +766,14 @@ begin
   for tmpChannel in fDeployChannels do
   begin
     if tmpChannel is TPAClientChannel then
-      if (not tmpChannel.DeployFile(TempFile,'.',5,'')) and (not fIgnoreErrors) then
-        if fLogExceptions then
-        begin
-          Writeln('Error in '+tmpChannel.ChannelName+'. Command Error.');
-          Halt(1);
-        end
-        else
-          raise Exception.Create('Error in '+tmpChannel.ChannelName+'. Command Error.');
+      if (not tmpChannel.DeployFile(TempFile,'.',5,'', OnFinished)) and (not fIgnoreErrors) then
+      if fLogExceptions then
+      begin
+        Writeln('Error in '+tmpChannel.ChannelName+'. Command Error.');
+        Halt(1);
+      end
+      else
+        raise Exception.Create('Error in '+tmpChannel.ChannelName+'. Command Error.');
   end;
 
   TFile.Delete(TempFile);
