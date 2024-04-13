@@ -7,7 +7,7 @@
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
-        <TargetedPlatforms>1</TargetedPlatforms>
+        <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Console</AppType>
         <ProjectName Condition="'$(ProjectName)'==''">embdeploy</ProjectName>
     </PropertyGroup>
@@ -211,7 +211,7 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <DCC_ConsoleTarget>true</DCC_ConsoleTarget>
-        <Debugger_RunParams>-verbose  -deploy -platform OSX64 -profile &quot;macPro-m2-Ed&quot; -dumpRemoteResultDir &quot;..\..\..\macDeploy&quot; -codeSign -dumpSepFilenames &quot;Boxoffice.app.zip;Boxoffice.pkg&quot; -batchCmdFileAfterDeploy &quot;../../../Installers/mac/Scripts/BoxOffice-Jenkins.txt&quot;  -registerPAClient -certificateNameDeveloper &quot;Developer ID Application: Cramgo BV (FZRAYS6PHS)&quot; -certificateNameInstaller &quot;Developer ID Installer: Cramgo BV (FZRAYS6PHS)&quot; -appleId &quot;espelt@cramgo.nl&quot; -appSpecificPassword &quot;owfl-ypbt-ljmy-oqnm&quot; -notarizationExtraOptions &quot;--timestamp --options=runtime&quot;   -project &quot;Boxoffice.dproj&quot;</Debugger_RunParams>
+        <Debugger_RunParams>-platform OSX64 -verbose -profile &quot;macPro-m2-Ed&quot; -certificateNameDeveloper &quot;Developer ID Application: Cramgo BV (FZRAYS6PHS)&quot; -certificateNameInstaller &quot;Developer ID Installer: Cramgo BV (FZRAYS6PHS)&quot; -appleId &quot;espelt@cramgo.nl&quot; -appSpecificPassword &quot;owfl-ypbt-ljmy-oqnm&quot; -cmdBefore &quot;../../../Installers/mac/Scripts/BoxOffice-Jenkins.txt&quot; -dumpRemoteResultDir &quot;..\..\..\macDeploy&quot; -dumpSepFilenames &quot;Boxoffice.app.zip;Boxoffice.pkg&quot; </Debugger_RunParams>
         <Debugger_CWD>C:\Dev\Delphi\boxoffice-3-developer\client-side\boxoffice\src\project files</Debugger_CWD>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
     </PropertyGroup>
@@ -219,7 +219,8 @@
         <VerInfo_IncludeVerInfo>false</VerInfo_IncludeVerInfo>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <BT_BuildType>Debug</BT_BuildType>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -233,6 +234,7 @@
         <DCC_MapFile>3</DCC_MapFile>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
+        <Debugger_RunParams>-platform OSX64 -verbose -profile &quot;macPro-m2-Ed&quot; -certificateNameDeveloper &quot;Developer ID Application: Cramgo BV (FZRAYS6PHS)&quot; -certificateNameInstaller &quot;Developer ID Installer: Cramgo BV (FZRAYS6PHS)&quot; -appleId &quot;espelt@cramgo.nl&quot; -appSpecificPassword &quot;owfl-ypbt-ljmy-oqnm&quot; -beforeCmd &quot;../../../Installers/mac/Scripts/BoxOffice-Jenkins.txt&quot; -dumpRemoteResultDir &quot;..\..\..\macDeploy&quot; -dumpSepFilenames &quot;Boxoffice.app.zip;Boxoffice.pkg&quot; </Debugger_RunParams>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -1211,7 +1213,7 @@
                 <Platform value="OSX64">False</Platform>
                 <Platform value="OSXARM64">False</Platform>
                 <Platform value="Win32">True</Platform>
-                <Platform value="Win64">False</Platform>
+                <Platform value="Win64">True</Platform>
             </Platforms>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>

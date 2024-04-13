@@ -225,7 +225,7 @@ end;
 
 procedure TDeployer.CodeSignProject();
 begin
-  if not PlatFormNeedsCodeSigning then
+  if not PlatFormNeedsCodeSigning() then
     Exit;
 
   for var tmpChannel in fDeployChannels do

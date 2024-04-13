@@ -1,18 +1,18 @@
 ﻿[ClosedView_QzpcRGV2XERlbHBoaVwzUGFydHlcRW1iRGVwbG95XERlcGxveUNoYW5uZWxzLnBhcw==]
 Module=C:\Dev\Delphi\3Party\EmbDeploy\DeployChannels.pas
 CursorX=1
-CursorY=179
-TopLine=156
+CursorY=246
+TopLine=226
 LeftCol=1
-Elisions={{240,87},{257,3},{''}}
+Elisions=
 Bookmarks=
 EditViewName=C:\Dev\Delphi\3Party\EmbDeploy\DeployChannels.pas
 
 [ClosedView_QzpcRGV2XERlbHBoaVwzUGFydHlcRW1iRGVwbG95XGRlcGxveWVyLnBhcw==]
 Module=C:\Dev\Delphi\3Party\EmbDeploy\deployer.pas
-CursorX=1
-CursorY=640
-TopLine=117
+CursorX=38
+CursorY=328
+TopLine=297
 LeftCol=1
 Elisions=
 Bookmarks=
@@ -20,11 +20,32 @@ EditViewName=C:\Dev\Delphi\3Party\EmbDeploy\deployer.pas
 
 [ClosedView_QzpcRGV2XERlbHBoaVwzUGFydHlcRW1iRGVwbG95XGVtYmRlcGxveS5kcHI=]
 Module=C:\Dev\Delphi\3Party\EmbDeploy\embdeploy.dpr
-CursorX=1
-CursorY=155
-TopLine=129
+CursorX=17
+CursorY=162
+TopLine=149
 LeftCol=1
 Elisions=
 Bookmarks=
 EditViewName=C:\Dev\Delphi\3Party\EmbDeploy\embdeploy.dpr
+[ClosedView_YzpccHJvZ3JhbSBmaWxlcyAoeDg2KVxlbWJhcmNhZGVyb1xzdHVkaW9cMjMuMFxTT1VSQ0VcUlRM
+XFNZU1xTeXN0ZW0uU3lzVXRpbHMucGFz]
+Module=c:\program files (x86)\embarcadero\studio\23.0\SOURCE\RTL\SYS\System.SysUtils.pas
+CursorX=1
+CursorY=26816
+TopLine=26799
+LeftCol=1
+Elisions=
+Bookmarks=
+EditViewName=c:\program files (x86)\embarcadero\studio\23.0\SOURCE\RTL\SYS\System.SysUtils.pas
+
+[ClosedView_YzpccHJvZ3JhbSBmaWxlcyAoeDg2KVxlbWJhcmNhZGVyb1xzdHVkaW9cMjMuMFxTT1VSQ0VcUlRM
+XFNZU1xTeXN0ZW0uU3lzVXRpbHMucGFz]
+Module=c:\program files (x86)\embarcadero\studio\23.0\SOURCE\RTL\SYS\System.SysUtils.pas
+CursorX=1
+CursorY=26839
+TopLine=26807
+LeftCol=1
+Elisions=
+Bookmarks=
+EditViewName=c:\program files (x86)\embarcadero\studio\23.0\SOURCE\RTL\SYS\System.SysUtils.pas
 

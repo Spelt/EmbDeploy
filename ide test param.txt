@@ -1,6 +1,9 @@
 ide test param
 
 -verbose  -deploy -useNativeInstaller -platform OSX64 -profile "macPro-m2-Ed" -dumpRemoteResultDir "..\..\..\macDeploy" -codeSign -dumpSepFilenames "Boxoffice.app.zip;Boxoffice.pkg" -batchCmdFileAfterDeploy "../../../Installers/mac/Scripts/BoxOffice-Jenkins.txt"  -registerPAClient -certificateNameDeveloper "Developer ID Application: Cramgo BV (FZRAYS6PHS)" -certificateNameInstaller "Developer ID Installer: Cramgo BV (FZRAYS6PHS)" -appleId "espelt@cramgo.nl" -appSpecificPassword "owfl-ypbt-ljmy-oqnm" -appSpecificPasswordEncoded "853F47C85F980780CF3CE532A4577BB6E456080C7EB9ECA09F177775D849A8A7A5EE5D147F731C61C1BD5765FAB3C363BAB3361C04652294162B458CE5F52284C946F35DD545FA95BFA2AF3F072C1D0A92003E071DBA097BE3FD16D14425789365CA9A8422F1" -notarizationExtraOptions "--timestamp --options=runtime"   -project "Boxoffice.dproj"
+-verbose  -deploy -platform OSX64 -profile "macPro-m2-Ed" -dumpRemoteResultDir "..\..\..\macDeploy" -codeSign -dumpSepFilenames "Boxoffice.app.zip;Boxoffice.pkg" -batchCmdFileAfterDeploy "../../../Installers/mac/Scripts/BoxOffice-Jenkins.txt"  -registerPAClient -certificateNameDeveloper "Developer ID Application: Cramgo BV (FZRAYS6PHS)" -certificateNameInstaller "Developer ID Installer: Cramgo BV (FZRAYS6PHS)" -appleId "espelt@cramgo.nl" -appSpecificPassword "owfl-ypbt-ljmy-oqnm" -notarizationExtraOptions "--timestamp --options=runtime"   -project "Boxoffice.dproj"
+
+-platform OSX64 -verbose -profile "macPro-m2-Ed" -certificateNameDeveloper "Developer ID Application: Cramgo BV (FZRAYS6PHS)" -certificateNameInstaller "Developer ID Installer: Cramgo BV (FZRAYS6PHS)" -appleId "espelt@cramgo.nl" -appSpecificPassword "owfl-ypbt-ljmy-oqnm" -cmdFileBefore "../../../Installers/mac/Scripts/BoxOffice-Jenkins.txt" -dumpRemoteResultDir "..\..\..\macDeploy" -dumpSepFilenames "Boxoffice.app.zip;Boxoffice.pkg" 
 
 vanuit de IDE 12.1
 > command_line: "/usr/bin/plutil" -convert binary1 "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.app/Contents/Info.plist"
@@ -27,3 +30,8 @@ vanuit mosco
 2024/04/13 16:13:42.810 Executing: /usr/bin/xcrun stapler staple "/Applications/Boxoffice.app/Boxoffice.pkg"
 2024/04/13 16:13:43.068 Completed staple
 
+vanuiot command line tool
+> command_line: "/usr/bin/codesign" --deep -s "Developer ID Application: Cramgo BV (FZRAYS6PHS)" -f "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.pkg"
+> command_line: "/usr/bin/ditto" -c -k --keepParent "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.pkg" "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.pkg.zip"
+> command_line: "/usr/bin/xcrun" notarytool submit "/Users/edwardspelt/PAServer/scratch-dir/edwardspelt-macPro-m2-Ed/Boxoffice.pkg.zip" --apple-id "espelt@cramgo.nl" --password "paoj-gfup-lhsv-ydoh" --team-id FZRAYS6PHS
+> command_line: "/usr/bin/xcrun" notarytool info 231922bf-75bd-487f-abf5-50d88fdc5d25 --apple-id "espelt@cramgo.nl" --password "paoj-gfup-lhsv-ydoh" --team-id FZRAYS6PHS

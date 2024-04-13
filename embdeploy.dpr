@@ -33,36 +33,27 @@ begin
   ShowParam('ProjectName', 'Name (relative or absolute) of the project file (.dproj)');
   ShowParam('-delphiver "ver"',  'Delphi version to use the paclient from. It is the number from the HKCU/Software/Emb.. If not the latest installed ' +
                                 'will be used');
-  ShowParam('-deploy "name"', 'Deploy the project to the remote profile. If not specified the default one from ' +
-                                'the IDE is used');
   ShowParam('-platform "name"', 'Platform to deploy (Win32, Win64, OSX64, iOSDevice, etc).');
   ShowParam('-profile "name"',  'Name of the remote profile to use. If not specified the default one for the platform is used');
-  ShowParam('-config "name"',   'Release or Debug configuration. If not specified the default one from the project file is used');
+  ShowParam('-config "name"',   'Release or Debug configuration. If not specified Release is used');
   ShowParam('-proot "name"',    'Remote project root folder. If not specified a default one is generated from the project name');
-  ShowParam('-cmd "command"', 'Execute an arbitrary command line on the remote server. The command is anything that ' +
+  ShowParam('-cmd "command"', 'Execute an arbitrary command line on the remote server after notarization. The command is anything that ' +
                               'can be executed from a terminal or command line prompt. It is executed from ' +
                               'above the remote project folder. The command can contain the $PROOT parameter, which is ' +
                               'replaced with the project root folder, e.g. $PROOT/Contents/... becomes myproject.app/Contents/...');
   ShowParam('-ignore', 'Ignore errors reported by paclient.exe and continue deploying');
-  ShowParam('-bundle "zipname"', 'Produce a ZIP archive of the files to be deployed. Useful for making a ZIP of an OSX project APP bundle');
   ShowParam('-verbose', 'Produces detailed debugging messages');
-  ShowParam('-registerPAClient','Uses the PAClient to deploy the project');
   ShowParam('-binaryFolder "folder"','The folder for the binary files. If not provided, the default location is assumed');
   ShowParam('-logExceptions','Logs any exceptions and quits instead of raising them');
-
   ShowParam('-appleId "name"',' You can find it in Project options - Deployment - Provisioning - Release Build type: Developer ID."');
-  ShowParam('-appSpecificPassswordEncoded "name"','You can find it in the ouput of a manual deploy command from within the IDE. Its very long 204 chars."');
+  ShowParam('-appSpecificPassword "name"',' App specific password.');
   ShowParam('-notarizationExtraOptions "name"','You can find it in Project options - Deployment - Provisioning - Release Build type: Developer ID."');
   ShowParam('-certificateNameDeveloper "name"','For OSX development the name of the "Developer ID Application Certificate". You can find it in Project options - Deployment - Provisioning - Build type: Developer ID."');
   ShowParam('-certificateNameInstaller "name"','For OSX installer the name of the "Developer ID Installer Certificate". You can find it in Project options - Deployment - Provisioning - Build type: Application Store."');
-  ShowParam('-batchCmdFileAfterDeploy "command script file"', 'Same as cmd but points to a relative or absolute script file and it is fired AFTER code signing and notarizing the project. ' +
+  ShowParam('-beforeCmd "command script file"', 'Same as cmd but points to a relative or absolute script file and it is fired BEFORE code signing and notarizing the project. ' +
                                  'The command only must be enclosed with double quotes. An inline quote needs to be escaped.');
   ShowParam('-dumpRemoteResultDir "name"','A local directory relative to the project folder in which to dump the whole resulting deployment including code signing and notarization.');
   ShowParam('-dumpSepFilenames "name"','Used with -dumpRemoteResultDir. Define here a list of files like "file1.pkg;file2.zip"');
-
-
-
-
 end;
 
 // Check if the valid combination of parameters is passed
@@ -70,7 +61,24 @@ function ValidateParams: Boolean;
 var
   tmpMessage: string;
 begin
-  Project := ParamStr(ParamCount);
+  if string.IsNullOrEmpty(project) then
+  begin  // Auto detect project in current directory
+    var currDir:=GetCurrentDir();
+    var files := TDirectory.GetFiles(currDir,'*.dproj');
+    if Length(files) = 0 then
+    begin
+      tmpMessage:='No Delphi project found in current directory: ' + currDir;
+      if logExceptions then
+      begin
+        Writeln(tmpMessage);
+        Halt(1);
+      end
+      else
+        raise Exception.Create(tmpMessage);
+      end;
+      Project := TPath.GetFileName(files[0]);
+  end;
+
   if not FileExists(Project) then
   begin
     tmpMessage:='Project "' + Project +'" not found';
@@ -82,7 +90,7 @@ begin
     else
       raise Exception.Create(tmpMessage);
   end;
-  Result := FindCmdLineSwitch('deploy') or FindCmdLineSwitch('cmd') or FindCmdLineSwitch('bundle');
+  Result := true;
 end;
 
 
@@ -92,13 +100,17 @@ begin
   try
     ExitCode := 1; // Default to error and change to success later
     Writeln('Automated deployer for Embarcadero RAD Studio projects - Version ' + VERSION);
-    Writeln('Written by Vladimir Georgiev, 2013-2023');
+    Writeln('Original written by Vladimir Georgiev and adapted by E. Spelt, 2013-2024');
     if FindCmdLineSwitch('?') or (ParamCount=0) then
     begin
       ShowUsage;
       Exit;
     end;
     logExceptions:=FindCmdLineSwitch('logExceptions');
+
+    if FindCmdLineSwitch('project', Param) then
+      Project := Param;
+
     ValidateParams;
 
     if FindCmdLineSwitch('delphiver', Param) then
@@ -109,23 +121,31 @@ begin
       Deployer.ProjectPath := GetCurrentDir();
       if FindCmdLineSwitch('platform', Param) then
         Deployer.Platform := Param;
+
       if FindCmdLineSwitch('profile', Param) then
         Deployer.RemoteProfile := Param;
+
       if FindCmdLineSwitch('config', Param) then
         Deployer.Config := Param;
+
       if FindCmdLineSwitch('proot', Param) then
         Deployer.ProjectRoot := Param;
+
       Deployer.IgnoreErrors := FindCmdLineSwitch('ignore');
       Deployer.Verbose:=FindCmdLineSwitch('verbose');
       Deployer.BinaryFolder:='';
+
       if FindCmdLineSwitch('binaryFolder', Param) then
         Deployer.BinaryFolder:=Param;
-      if FindCmdLineSwitch('registerPAClient') then
-        Deployer.RegisterPACLient;
+
+      Deployer.RegisterPACLient;
+
       if FindCmdLineSwitch('certificateNameDeveloper', Param) then
         Deployer.CertNameDev := param;
+
       if FindCmdLineSwitch('certificateNameInstaller', Param) then
         Deployer.CertNameInstaller := param;
+
       if FindCmdLineSwitch('appleId', Param) then
         Deployer.AppleId := param;
 
@@ -139,21 +159,22 @@ begin
 
       Deployer.ParseProject(Project);
 
+      if FindCmdLineSwitch('beforeCmd', Param) then
+      begin
+        Deployer.ExecuteCommandFile(Project, Param);
+        Writeln('Command file executed');
+      end;
+
       // Codesign the project
       //if Deployer.CodeSign then
       //begin
-        //Deployer.CodeSignProject();
+//        Deployer.CodeSignProject();
         //Writeln('CodeSigning project complete');
 
         //Deployer.NotarizeProject();
         //Writeln('Notarizing project complete');
       //end;
 
-      if FindCmdLineSwitch('batchCmdFileAfterDeploy', Param) then
-      begin
-        Deployer.ExecuteCommandFile(Project, Param);
-        Writeln('Command file executed');
-      end;
 
       // Create an installer for the project
 
@@ -175,13 +196,6 @@ begin
         Deployer.ExecuteCommand(Project, Param);
         Writeln('Command executed');
       end;
-
-//      // Make a ZIP bundle of the project deployment files
-//      if FindCmdLineSwitch('bundle', Param) then
-//      begin
-//        Deployer.BundleProject(Project, Param);
-//        Writeln('ZIP bundle complete');
-//      end;
 
       if FindCmdLineSwitch('dumpRemoteResultDir', Param) then
       begin
