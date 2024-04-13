@@ -28,7 +28,7 @@ procedure ShowUsage;
 
 begin
   WriteLn('');
-  Writeln('Usage: embdeploy [-delphiver "ver"] -deploy|(-cmd "command")|(-bundle "zip") [-platform|-profile|-config|-proot "name"] [-ignore] ProjectName');
+  Writeln('Usage: embdeploy [-delphiver "ver"] [-platform|-profile|-config|-proot "name"] [-ignore] ProjectName');
   WriteLn('');
   ShowParam('ProjectName', 'Name (relative or absolute) of the project file (.dproj)');
   ShowParam('-delphiver "ver"',  'Delphi version to use the paclient from. It is the number from the HKCU/Software/Emb.. If not the latest installed ' +
@@ -47,12 +47,8 @@ begin
   ShowParam('-bundle "zipname"', 'Produce a ZIP archive of the files to be deployed. Useful for making a ZIP of an OSX project APP bundle');
   ShowParam('-verbose', 'Produces detailed debugging messages');
   ShowParam('-registerPAClient','Uses the PAClient to deploy the project');
-  ShowParam('-registerFolder "folder"', 'OSX only: Creates the APP folder structure on Windows.'+
-                                      ' Useful for building OSX without the need to use the paclient on OSX');
   ShowParam('-binaryFolder "folder"','The folder for the binary files. If not provided, the default location is assumed');
   ShowParam('-logExceptions','Logs any exceptions and quits instead of raising them');
-
-  ShowParam('-codeSign', 'Code sign and notarize the deployment.');
 
   ShowParam('-appleId "name"',' You can find it in Project options - Deployment - Provisioning - Release Build type: Developer ID."');
   ShowParam('-appSpecificPassswordEncoded "name"','You can find it in the ouput of a manual deploy command from within the IDE. Its very long 204 chars."');
@@ -88,7 +84,10 @@ begin
   end;
   Result := FindCmdLineSwitch('deploy') or FindCmdLineSwitch('cmd') or FindCmdLineSwitch('bundle');
 end;
+
+
 // Main application body
+
 begin
   try
     ExitCode := 1; // Default to error and change to success later
@@ -123,18 +122,12 @@ begin
         Deployer.BinaryFolder:=Param;
       if FindCmdLineSwitch('registerPAClient') then
         Deployer.RegisterPACLient;
-      if FindCmdLineSwitch('registerFolder', Param) then
-        Deployer.RegisterFolder(Param, TPath.GetFileNameWithoutExtension(Project));
-
-      Deployer.CodeSign := FindCmdLineSwitch('codeSign');
       if FindCmdLineSwitch('certificateNameDeveloper', Param) then
         Deployer.CertNameDev := param;
       if FindCmdLineSwitch('certificateNameInstaller', Param) then
         Deployer.CertNameInstaller := param;
       if FindCmdLineSwitch('appleId', Param) then
         Deployer.AppleId := param;
-      if FindCmdLineSwitch('appSpecificPasswordEncoded', Param) then
-        Deployer.AppSpecificPwEncoded := param;
 
       if FindCmdLineSwitch('appSpecificPassword', Param) then
         Deployer.AppSpecificPassword := param;
@@ -146,22 +139,15 @@ begin
 
       Deployer.ParseProject(Project);
 
-      // Deploy the project
-      if FindCmdLineSwitch('deploy') then
-      begin
-     //   Deployer.DeployProject(Project);
-      //  Writeln('Deployment complete');
-      end;
-
       // Codesign the project
-      if Deployer.CodeSign then
-      begin
+      //if Deployer.CodeSign then
+      //begin
         //Deployer.CodeSignProject();
         //Writeln('CodeSigning project complete');
 
         //Deployer.NotarizeProject();
         //Writeln('Notarizing project complete');
-      end;
+      //end;
 
       if FindCmdLineSwitch('batchCmdFileAfterDeploy', Param) then
       begin
@@ -190,12 +176,12 @@ begin
         Writeln('Command executed');
       end;
 
-      // Make a ZIP bundle of the project deployment files
-      if FindCmdLineSwitch('bundle', Param) then
-      begin
-        Deployer.BundleProject(Project, Param);
-        Writeln('ZIP bundle complete');
-      end;
+//      // Make a ZIP bundle of the project deployment files
+//      if FindCmdLineSwitch('bundle', Param) then
+//      begin
+//        Deployer.BundleProject(Project, Param);
+//        Writeln('ZIP bundle complete');
+//      end;
 
       if FindCmdLineSwitch('dumpRemoteResultDir', Param) then
       begin
@@ -221,7 +207,7 @@ begin
   end;
 
  {$IFDEF DEBUG}
- // Sleep(60000);
+  Sleep(60000);
  {$ENDIF}
 
 end.

@@ -79,8 +79,6 @@ type
     fNotarizationExtraOptions: string;
     fProjectPath: string;
     fInstallerIsCreated: Boolean;
-    fAppIsCodeSigned : Boolean;
-    fCodeSign: Boolean;
     fTeamId,
     fAppSpecificPassword : string;
     procedure GetEmbarcaderoPaths;
@@ -93,11 +91,9 @@ type
     constructor Create(const aDelphiVersion: String);
     destructor Destroy; override;
     procedure BundleProject(const aProjectPath, aZIPName: String);
-    procedure DeployProject(const aProjectPath: String);
     procedure ParseProject(const aProjectPath: String);
 
     procedure CodeSignProject();
-    procedure NotarizeProject();
     procedure CreateInstallerProject();
     procedure CodeSignInstaller();
     procedure NotarizeInstaller();
@@ -115,7 +111,6 @@ type
     property Verbose      : boolean read fVerbose       write fVerbose;
     property BinaryFolder : string  read fBinaryFolder  write fBinaryFolder;
     property LogExceptions: Boolean read fLogExceptions write fLogExceptions;
-    property CodeSign     : Boolean read fCodeSign      write fCodeSign;
     property CertNameDev              : string read fCertNameDev    write fCertNameDev;
     property AppleId                  : string read fAppleId        write fAppleId;
     property AppSpecificPassword     : string read fAppSpecificPassword     write fAppSpecificPassword;
@@ -201,7 +196,6 @@ begin
   fCertNameDev := '';
   fCertNameInstaller := '';
   fInstallerIsCreated := false;
-  fAppIsCodeSigned := false;
   GetEmbarcaderoPaths;
   fTeamId := '';
 end;
@@ -229,64 +223,8 @@ begin
   end;
 end;
 
-// Deploy the project to the remote server
-procedure TDeployer.DeployProject(const aProjectPath: String);
-var
-  S, TempFile: String;
-  tmpChannel: IDeployChannel;
-begin
-  SetupChannels;
-  WriteLn(Format('Deploying %d files from project %s, config %s', [Length(fDeployFiles), aProjectPath, fConfig]));
-  // Build a temp file list to clean the remote project folder
-  TempFile := TPath.GetTempFileName;
-  for var I := 0 to Length(fDeployFiles) - 1 do
-    S := S + fDeployFiles[I].RemoteDir + fDeployFiles[I].RemoteName + sLineBreak;
-  TFile.WriteAllText(TempFile, S);
-  if fVerbose then
-    Writeln('TempFile: '+TempFile);
-  for tmpChannel in fDeployChannels do
-    tmpChannel.FileListName:=TempFile;
-  //Clean up deploy channels
-  // Execute the clean command and delete the temp file
-  Writeln('Cleaning remote project folder');
-  for tmpChannel in fDeployChannels do
-  begin
-    if (not tmpChannel.CleanChannel) and (not fIgnoreErrors) then
-      if fLogExceptions then
-      begin
-        Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-        Halt(1);
-      end
-      else
-        raise Exception.Create('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-  end;
-  TFile.Delete(TempFile);
-
-  // Deploy the files
-  for var I := 0 to Length(fDeployFiles) - 1 do
-  begin
-    Writeln('Deploying file: ' + fDeployFiles[I].LocalName);
-    for tmpChannel in fDeployChannels do
-    begin
-      if (not tmpChannel.DeployFile(fDeployFiles[I].LocalName, fDeployFiles[I].RemoteDir,
-              fDeployFiles[I].Operation, fDeployFiles[I].RemoteName)) and (not fIgnoreErrors) then
-        if fLogExceptions then
-        begin
-          Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-          Halt(1);
-        end
-        else
-          raise Exception.Create('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-    end;
-  end;
-
-  for tmpChannel in fDeployChannels do
-    tmpChannel.CloseChannel;
-end;
-
 procedure TDeployer.CodeSignProject();
 begin
-  fAppIsCodeSigned := false;
   if not PlatFormNeedsCodeSigning then
     Exit;
 
@@ -305,7 +243,6 @@ begin
       else
         raise Exception.Create('Error in '+ tmpChannel.ChannelName+'. Deployment stopped.');
   end;
-  fAppIsCodeSigned := true;
 end;
 
 function TDeployer.ExtractTeamId(): string;
@@ -317,40 +254,6 @@ begin
 
   result := Copy(fCertNameDev, p1+1, p2 - p1-1);
   Writeln('Team id = ' + result);
-end;
-
-procedure TDeployer.NotarizeProject();
-begin
-  Writeln('Project notarization ' + fProjectName);
-  if fAppleId = '' then
-  begin
-    if fLogExceptions then
-    begin
-      Writeln('Missing parameters: AppleId. Deployment stopped.');
-      Halt(1);
-    end
-    else
-      raise Exception.Create('Missing parameters: AppleId. Deployment stopped.');
-  end;
-
-  fTeamId := ExtractTeamId();
-
-  for var tmpChannel in fDeployChannels do
-  begin
-    if not (tmpChannel is TPAClientChannel) then
-      Continue;
-    var channel := tmpChannel as TPAClientChannel;
-    var localPath := string.format('%s\\%s', [ProjectPath, fProjectName]);
-    if (not channel.Notarize(fProjectRoot, fAppleId, fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptApp, fTeamId))
-      and (not fIgnoreErrors) then
-      if fLogExceptions then
-      begin
-        Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-        Halt(1);
-      end
-      else
-        raise Exception.Create('Error in '+ tmpChannel.ChannelName+'. Deployment stopped.');
-  end;
 end;
 
 procedure TDeployer.CreateInstallerProject();
@@ -402,7 +305,7 @@ begin
   if fTeamId = '' then
     fTeamId := ExtractTeamId();
 
-  if (fAppleId = '') or (fAppSpecificPwEncoded = '')  then
+  if fAppleId = '' then
   begin
     if fLogExceptions then
     begin

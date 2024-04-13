@@ -75,12 +75,9 @@ type
     function CodeSignApp(const projectRoot, developerCertificateName, projectName:
         string): boolean;
     function CodeSignInstaller(const projectRoot, developerCertificateName, projectName: string): boolean;
-    function CreateInstaller(const projectRoot, projectName, CertificateNameInstaller: string): boolean;
     function CreateNativeInstallerScript(const projectRoot, projectName: string): string;
     function CreateNativeNotarizationScript(const AppleId, Password, TeamId, ProjectName: string): string;
 
-    function Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
-        localPath, optionalNotarizationParam: string; projectType: TProjectType; const teamId: string): boolean;
     function RetrieveResult(const SepFiles, localFolder: string):boolean;
   end;
 
@@ -240,12 +237,6 @@ begin
   result := CallPaclient(p);
 end;
 
-function TPAClientChannel.CreateInstaller(const projectRoot, projectName, CertificateNameInstaller: string): boolean;
-begin
-  var p := string.Format('--productbuild="%s,Applications,%s.pkg,''%s''"',[ProjectRoot, ProjectName, CertificateNameInstaller]);
-  result := CallPaclient(p);
-end;
-
 function TPAClientChannel.CreateNativeInstallerScript(const projectRoot, projectName: string): string;
 begin
   result := string.Format('/usr/bin/pkgbuild --root "%s" --install-location "/Applications/%s" --identifier "%s" "%s.pkg"', [ProjectRoot, ProjectRoot, projectName, projectName]);
@@ -258,76 +249,6 @@ begin
   result := string.Format('/usr/bin/xcrun notarytool submit --apple-id "%s" --password "%s" --team-id "%s" --no-progress "%s.pkg"',
     [AppleId, Password, TeamId, projectName]);
   Writeln('Installer creation script: ' + result);
-end;
-
-function TPAClientChannel.Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
-  localPath, optionalNotarizationParam: string; projectType: TProjectType; const teamId: string): boolean;
-begin
-
-  var p := string.Format(PACLIENT_NOTARIZE_SIG, [projectRoot, projectName, appleId, appSpecificPwEncoded, teamId, localPath, localPath]);
-  Writeln(p);
-  var notarizationUUID := '';
-  result := CallPaclient(p,
-  procedure (Output: TStringList)
-  begin
-    // Retrieve RequestUUID from the console output. Not from the temp txt file, was also a posibility.
-
-    var tmpFileName := TPath.Combine(GetCurrentDir(), projectName + '._@emb_requestuuid.tmp');
-    if FileExists(tmpFileName) then
-    begin
-      notarizationUUID := TFile.ReadAllText(tmpFileName);
-      Writeln('UUID=' + notarizationUUID);
-      TFile.Delete(tmpFileName);
-      Writeln('Deleted temp file: ' + tmpFileName);
-    end;
-
-//    for var i:=0 to Output.Count - 1 do
-//    begin
-//      if ContainsText(Output.Strings[i], 'RequestUUID:') then
-//      begin
-//        var p := Pos(':', Output.Strings[i]);
-//        notarizationUUID := Copy(Output.Strings[i], p + 1, Length(Output.Strings[i]) - p + 1);
-//        notarizationUUID := Trim(notarizationUUID);
-//        Writeln('UUID=' + notarizationUUID);
-//        break;
-//      end;
-//    end;
-
-  end);
-
-  if (not result) or (notarizationUUID = '') then
-  begin
-    WriteLn('Notarization no result. Exit.');
-    Exit;
-  end;
-  var notarizeDo:= string.Format(PACLIENT_NOTARIZE_DO, [notarizationUUID, appleId, appSpecificPwEncoded, teamId, localPath]);
-  result := CallPaclient(notarizeDo,
-  procedure (Output: TStringList)
-  begin
-    for var i:=0 to Output.Count - 1 do
-    begin
-      Writeln(output[i]);
-    end;
-  end);
-
-  if not result then
-    Exit;
-
-  var staple := '';
-  if ProjectType = TProjectType.ptApp then
-    staple := string.Format(PACLIENT_NOTARIZE_STAPLE_APP,[projectRoot, projectName])
-  else
-    staple := string.Format(PACLIENT_NOTARIZE_STAPLE_INST,[projectRoot]);
-
-  result := CallPaclient(staple,
-  procedure (Output: TStringList)
-  begin
-    for var i:=0 to Output.Count - 1 do
-    begin
-      Writeln(output[i]);
-    end;
-  end);
-
 end;
 
 function TPAClientChannel.RetrieveResult(const SepFiles, localFolder: string): boolean;
