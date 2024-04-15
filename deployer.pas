@@ -80,7 +80,8 @@ type
     fProjectPath: string;
     fInstallerIsCreated: Boolean;
     fTeamId,
-    fAppSpecificPassword : string;
+    fAppSpecificPassword,
+    fAppSpecificPasswordEncoded: string;
     procedure GetEmbarcaderoPaths;
     procedure SetupChannels;
     procedure SetConfig(const Value: String);
@@ -114,6 +115,7 @@ type
     property CertNameDev              : string read fCertNameDev    write fCertNameDev;
     property AppleId                  : string read fAppleId        write fAppleId;
     property AppSpecificPassword     : string read fAppSpecificPassword     write fAppSpecificPassword;
+    property AppSpecificPasswordEncoded: string read fAppSpecificPasswordEncoded write fAppSpecificPasswordEncoded;
 
 
     property CertNameInstaller        : string read fCertNameInstaller        write fCertNameInstaller;
@@ -279,23 +281,14 @@ procedure TDeployer.CodeSignInstaller();
 begin
   if not fInstallerIsCreated then
     Exit;
-
-  for var tmpChannel in fDeployChannels do
-  begin
-    if not (tmpChannel is TPAClientChannel) then
-      Continue;
-    var channel := tmpChannel as TPAClientChannel;
-    var apkName := fProjectName + '.pkg';
-    Writeln('Code signing the installer ' + apkName);
-    if (not channel.CodeSignInstaller(apkName, fCertNameDev, fProjectName)) and (not fIgnoreErrors) then
-      if fLogExceptions then
-      begin
-        Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
-        Halt(1);
-      end
-      else
-        raise Exception.Create('Error in '+ tmpChannel.ChannelName+'. Deployment stopped.');
-  end;
+  var pkgName := fProjectName + '.pkg';
+  Writeln('Code signing the installer ' + pkgName);
+  var codeSignScript := string.Format('/usr/bin/productsign --sign "%s" "%s.pkg" "%sSigned.pkg"', [fCertNameInstaller, fProjectName, fProjectName]);
+  ExecuteCommand('', codeSignScript, false);
+  var s := string.format('"rm" -f %s.pkg', [fProjectName]);
+  ExecuteCommand('', s);
+  s := string.Format('mv "%sSigned.pkg" "%s.pkg"',[fProjectName,fProjectName]);
+  ExecuteCommand('', s);
 end;
 
 procedure TDeployer.NotarizeInstaller();
@@ -309,40 +302,33 @@ begin
   begin
     if fLogExceptions then
     begin
-      Writeln('Missing parameters: AppleId or AppSpecificPwEncoded. Deployment stopped.');
+      Writeln('Missing parameters: AppleId. Deployment stopped.');
       Halt(1);
     end
     else
-      raise Exception.Create('Missing parameters: AppleId or AppSpecificPwEncoded. Deployment stopped.');
+      raise Exception.Create('Missing parameters: AppleId Deployment stopped.');
   end;
 
   for var tmpChannel in fDeployChannels do
   begin
+
     if not (tmpChannel is TPAClientChannel) then
       Continue;
 
     var channel := tmpChannel as TPAClientChannel;
-    var apkName := fProjectName + '.pkg';
+    var pkgName := fProjectName + '.pkg';   // apkName := 'Boxoffice.app/Boxoffice.pkg';
     var localPath := string.format('%s\\%s', [ProjectPath, fProjectName]);
+
+    if (not channel.Notarize(pkgName, fAppleId, fAppSpecificPasswordEncoded,
+     fProjectName, localPath, fNotarizationExtraOptions, TProjectType.ptApp, fTeamId))
+    and (not fIgnoreErrors) then
+    if fLogExceptions then
     begin
-      var script := channel.CreateNativeNotarizationScript(AppleId, fAppSpecificPassword, fTeamId, apkName);
-      ExecuteCommand('', script, false,
-      procedure (Output: TStringList)
-      begin
-        var notarizationUUID:='';
-        for var i:=0 to Output.Count - 1 do
-        begin
-          if ContainsText(Output.Strings[i], 'RequestUUID:') then
-          begin
-            var p := Pos(':', Output.Strings[i]);
-            notarizationUUID := Copy(Output.Strings[i], p + 1, Length(Output.Strings[i]) - p + 1);
-            notarizationUUID := Trim(notarizationUUID);
-            Writeln('UUID=' + notarizationUUID);
-            break;
-          end;
-        end;
-      end);
-    end;
+      Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
+      Halt(1);
+    end
+    else
+      raise Exception.Create('Error in '+ tmpChannel.ChannelName+'. Deployment stopped.');
   end;
 end;
 
@@ -413,6 +399,7 @@ begin
           raise Exception.Create('ProjectRoot not found in the project.');
       fProjectRoot := Node.attributes.getNamedItem('Name').nodeValue;
       fProjectRoot := fProjectRoot.Replace('$(PROJECTNAME)', fProjectName);
+
     end;
 
     // Get all the Platform subnodes of the DeployClass nodes for the specified platform

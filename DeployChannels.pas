@@ -64,6 +64,7 @@ type
     fDelphiVersion,
     fPlatfrom: string;
     function CallPAClient(const aCommand: string; OnFinished: TProc<TStringList> = nil): Boolean;
+
   public
     constructor Create (const newRemoteProfile: string; const newPAClientPAth: string;
                         const newDelphiVersion: string; const newPlatform: string);
@@ -76,9 +77,10 @@ type
         string): boolean;
     function CodeSignInstaller(const projectRoot, developerCertificateName, projectName: string): boolean;
     function CreateNativeInstallerScript(const projectRoot, projectName: string): string;
-    function CreateNativeNotarizationScript(const AppleId, Password, TeamId, ProjectName: string): string;
-
     function RetrieveResult(const SepFiles, localFolder: string):boolean;
+    function Notarize(const projectRoot, appleId, appSpecificPwEncoded,
+      projectName, localPath, optionalNotarizationParam: string;
+      projectType: TProjectType; const teamId: string): boolean;
   end;
 
   TFolderChannel = class(TDeployBaseChannel, IDeployChannel)
@@ -152,7 +154,7 @@ begin
     StartInfo.hStdOutput  := PipeWrite;
     StartInfo.hStdError   := PipeWrite;
     StartInfo.dwFlags     := STARTF_USESTDHANDLES;  // use output redirect pipe
-    fullProcessPath:='"'+fPaclientPath+'"' + ' ' + aCommand + ' "' + fRemoteProfile+'"';
+    fullProcessPath:='"'+fPaclientPath+'"' + ' ' + aCommand + ' ' + fRemoteProfile;
     if fVerbose then
       Writeln('Full Command Line: '+fullProcessPath);
     if CreateProcess(nil, PChar(fullProcessPath), nil, nil, true,
@@ -243,11 +245,59 @@ begin
   Writeln('Installer creation script: ' + result);
 end;
 
-function TPAClientChannel.CreateNativeNotarizationScript(const AppleId, Password, TeamId, ProjectName: string): string;
+function TPAClientChannel.Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,
+  localPath, optionalNotarizationParam: string; projectType: TProjectType; const teamId: string): boolean;
 begin
-  result := string.Format('/usr/bin/xcrun notarytool submit --apple-id "%s" --password "%s" --team-id "%s" --no-progress "%s"',
-    [AppleId, Password, TeamId, projectName]);
-  Writeln('Notarization script: ' + result);
+
+  var p := string.Format(PACLIENT_NOTARIZE_SIG, [projectRoot, projectName, appleId, appSpecificPwEncoded, teamId, localPath, localPath]);
+  Writeln(p);
+  var notarizationUUID := '';
+  result := CallPaclient(p,
+  procedure (Output: TStringList)
+  begin
+    var tmpFileName := TPath.Combine(GetCurrentDir(), projectName + '._@emb_requestuuid.tmp');
+    if FileExists(tmpFileName) then
+    begin
+      notarizationUUID := TFile.ReadAllText(tmpFileName);
+      Writeln('UUID=' + notarizationUUID);
+      TFile.Delete(tmpFileName);
+      Writeln('Deleted temp file: ' + tmpFileName);
+    end;
+  end);
+
+  if (not result) or (notarizationUUID = '') then
+  begin
+    WriteLn('Notarization no result. Exit.');
+    Exit;
+  end;
+  var notarizeDo:= string.Format(PACLIENT_NOTARIZE_DO, [notarizationUUID, appleId, appSpecificPwEncoded, teamId, localPath]);
+  result := CallPaclient(notarizeDo,
+  procedure (Output: TStringList)
+  begin
+    for var i:=0 to Output.Count - 1 do
+    begin
+      Writeln(output[i]);
+    end;
+  end);
+
+  if not result then
+    Exit;
+
+  var staple := '';
+  if ProjectType = TProjectType.ptApp then
+    staple := string.Format(PACLIENT_NOTARIZE_STAPLE_APP,[projectRoot, projectName])
+  else
+    staple := string.Format(PACLIENT_NOTARIZE_STAPLE_INST,[projectRoot]);
+
+  result := CallPaclient(staple,
+  procedure (Output: TStringList)
+  begin
+    for var i:=0 to Output.Count - 1 do
+    begin
+      Writeln(output[i]);
+    end;
+  end);
+
 end;
 
 function TPAClientChannel.RetrieveResult(const SepFiles, localFolder: string): boolean;

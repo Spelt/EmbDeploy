@@ -3,7 +3,7 @@ Automated deployer for Embarcadero RAD Studio projects
 Created by Vladimir Georgiev, 2013
 MIT License (MIT)
 }
-program embdeploy;
+program EmbDeploy;
 {$APPTYPE CONSOLE}
 {$R *.res}
 uses  System.SysUtils,
@@ -47,10 +47,12 @@ begin
   ShowParam('-logExceptions','Logs any exceptions and quits instead of raising them');
   ShowParam('-appleId "name"',' You can find it in Project options - Deployment - Provisioning - Release Build type: Developer ID."');
   ShowParam('-appSpecificPassword "name"',' App specific password.');
+  ShowParam('-appSpecificPasswordEncoded "name"',' Encoded app specific password. You can find it in the deploy proces output window.');
+
   ShowParam('-notarizationExtraOptions "name"','You can find it in Project options - Deployment - Provisioning - Release Build type: Developer ID."');
   ShowParam('-certificateNameDeveloper "name"','For OSX development the name of the "Developer ID Application Certificate". You can find it in Project options - Deployment - Provisioning - Build type: Developer ID."');
   ShowParam('-certificateNameInstaller "name"','For OSX installer the name of the "Developer ID Installer Certificate". You can find it in Project options - Deployment - Provisioning - Build type: Application Store."');
-  ShowParam('-beforeCmd "command script file"', 'Same as cmd but points to a relative or absolute script file and it is fired BEFORE code signing and notarizing the project. ' +
+  ShowParam('-commandBefore "command script file"', 'Same as cmd but points to a relative or absolute script file and it is fired BEFORE code signing and notarizing the project. ' +
                                  'The command only must be enclosed with double quotes. An inline quote needs to be escaped.');
   ShowParam('-dumpRemoteResultDir "name"','A local directory relative to the project folder in which to dump the whole resulting deployment including code signing and notarization.');
   ShowParam('-dumpSepFilenames "name"','Used with -dumpRemoteResultDir. Define here a list of files like "file1.pkg;file2.zip"');
@@ -152,6 +154,10 @@ begin
       if FindCmdLineSwitch('appSpecificPassword', Param) then
         Deployer.AppSpecificPassword := param;
 
+      if FindCmdLineSwitch('appSpecificPasswordEncoded', Param) then
+        Deployer.AppSpecificPasswordEncoded := param;
+
+
       if FindCmdLineSwitch('notarizationExtraOptions', Param) then
       begin
         Deployer.NotarizationExtraOptions := param;
@@ -159,13 +165,15 @@ begin
 
       Deployer.ParseProject(Project);
 
-      if FindCmdLineSwitch('beforeCmd', Param) then
+      if FindCmdLineSwitch('commandBefore', Param) then
       begin
         Deployer.ExecuteCommandFile(Project, Param);
         Writeln('Command file executed');
       end;
 
-      // Codesign the project
+      // Codesign the project.
+      // !!We don't do this. We rely on that the application is already codesigned via MSBuild.
+
       //if Deployer.CodeSign then
       //begin
 //        Deployer.CodeSignProject();
