@@ -33,7 +33,7 @@ begin
   ShowParam('ProjectName', 'Name (relative or absolute) of the project file (.dproj)');
   ShowParam('-delphiver "ver"',  'Delphi version to use the paclient from. It is the number from the HKCU/Software/Emb.. If not the latest installed ' +
                                 'will be used');
-  ShowParam('-platform "name"', 'Platform to deploy (Win32, Win64, OSX64, iOSDevice, etc).');
+  ShowParam('-platform "name"', 'Platform to deploy (Win32, Win64, OSX64, iOSDevice64, etc).');
   ShowParam('-profile "name"',  'Name of the remote profile to use. If not specified the default one for the platform is used');
   ShowParam('-config "name"',   'Release or Debug configuration. If not specified Release is used');
   ShowParam('-proot "name"',    'Remote project root folder. If not specified a default one is generated from the project name');
@@ -56,6 +56,9 @@ begin
                                  'The command only must be enclosed with double quotes. An inline quote needs to be escaped.');
   ShowParam('-dumpRemoteResultDir "name"','A local directory relative to the project folder in which to dump the whole resulting deployment including code signing and notarization.');
   ShowParam('-dumpSepFilenames "name"','Used with -dumpRemoteResultDir. Define here a list of files like "file1.pkg;file2.zip"');
+
+  ShowParam('-uploadToAppStore ','Uploads to the Apple App store."');
+
 end;
 
 // Check if the valid combination of parameters is passed
@@ -197,6 +200,22 @@ begin
         Deployer.NotarizeInstaller();
         Writeln('Notarizing installer complete');
       end;
+
+
+      // Deploy the project
+      if FindCmdLineSwitch('deploy') then
+      begin
+        Deployer.DeployProject(Project);
+        Writeln('Deployment complete');
+      end;
+
+
+      if FindCmdLineSwitch('uploadToAppStore', Param) then
+      begin
+        Deployer.UploadToAppStore();
+        Writeln('Command executed');
+      end;
+
 
       // Execute a custom remote command
       if FindCmdLineSwitch('cmd', Param) then

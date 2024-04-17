@@ -189,10 +189,10 @@ begin
   finally
     CloseHandle(PipeRead);
 
-    {$IFNDEF  DEBUG}  // The PipeWrite handle is closed twice,
+    {$IF DEBUG}  // The PipeWrite handle is closed twice,
                       //which is acceptable in Release,
                       //but raises exceptions when running with the debugger
-    CloseHandle(PipeWrite);
+    //CloseHandle(PipeWrite);
     {$ENDIF}
   end;
 end;

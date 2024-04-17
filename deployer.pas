@@ -92,6 +92,7 @@ type
     constructor Create(const aDelphiVersion: String);
     destructor Destroy; override;
     procedure BundleProject(const aProjectPath, aZIPName: String);
+    procedure DeployProject(const aProjectPath: String);
     procedure ParseProject(const aProjectPath: String);
 
     procedure CodeSignProject();
@@ -104,6 +105,8 @@ type
     procedure DumpRemoteDirectory(const aProjectPath, directoryName, sepFiles: String);
     procedure RegisterPACLient;
     procedure RegisterFolder(const regPath: string; const project: string);
+    procedure UploadToAppStore();
+
     property Config       : String  read fConfig        write SetConfig;
     property IgnoreErrors : Boolean read fIgnoreErrors  write fIgnoreErrors;
     property Platform     : String  read fPlatform      write fPlatform;
@@ -201,6 +204,8 @@ begin
   GetEmbarcaderoPaths;
   fTeamId := '';
 end;
+
+
 
 // Produce a ZIP archive of the files to be deployed (useful to produce archives of the OSX .APP bundles on Win)
 procedure TDeployer.BundleProject(const aProjectPath, aZIPName: String);
@@ -332,6 +337,76 @@ begin
   end;
 end;
 
+   // Deploy the project to the remote server
+procedure TDeployer.DeployProject(const aProjectPath: String);
+var
+  S, TempFile: String;
+  I: Integer;
+  tmpChannel: IDeployChannel;
+begin
+ // ParseProject(aProjectPath);
+
+  SetupChannels;
+
+  WriteLn(Format('Deploying %d files from project %s, config %s', [length(fDeployFiles), aProjectPath, fConfig]));
+
+  // Build a temp file list to clean the remote project folder
+  TempFile := TPath.GetTempFileName;
+  for I := 0 to Length(fDeployFiles) - 1 do
+    S := S + fDeployFiles[I].RemoteDir + fDeployFiles[I].RemoteName + sLineBreak;
+  TFile.WriteAllText(TempFile, S);
+
+  if fVerbose then
+    Writeln('TempFile: '+TempFile);
+
+  for tmpChannel in fDeployChannels do
+    tmpChannel.FileListName:=TempFile;
+
+  //Clean up deploy channels
+  // Execute the clean command and delete the temp file
+  Writeln('Cleaning remote project folder');
+
+  for tmpChannel in fDeployChannels do
+  begin
+    if (not tmpChannel.CleanChannel) and (not fIgnoreErrors) then
+      if fLogExceptions then
+      begin
+        Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
+        Halt(1);
+      end
+      else
+        raise Exception.Create('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
+  end;
+  TFile.Delete(TempFile);
+
+
+  // Deploy the files
+  for I := 0 to Length(fDeployFiles) - 1 do
+  begin
+    Writeln('Deploying file: ' + fDeployFiles[I].LocalName);
+
+//    if not TFile.Exists(fDeployFiles[I].LocalName) then
+//      CreateDeploymentFile(fDeployFiles[I].LocalName);
+
+    for tmpChannel in fDeployChannels do
+    begin
+      if (not tmpChannel.DeployFile(fDeployFiles[I].LocalName, fDeployFiles[I].RemoteDir,
+              fDeployFiles[I].Operation, fDeployFiles[I].RemoteName)) and (not fIgnoreErrors) then
+      begin
+        if fLogExceptions then
+        begin
+          Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped. LocalFilename: ' + fDeployFiles[I].LocalName);
+        end;
+        //raise Exception.Create('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
+      end;
+    end;
+  end;
+
+  for tmpChannel in fDeployChannels do
+    tmpChannel.CloseChannel;
+end;
+
+
 destructor TDeployer.Destroy;
 begin
   fDeployChannels.Free;
@@ -366,6 +441,7 @@ begin
       end
       else
         raise Exception.Create('Project file could not be loaded');
+
     // Read the default platform if not set with a parameter (OSX32, Win32/64, etc)
     if fPlatform.IsEmpty then
     begin
@@ -415,7 +491,10 @@ begin
         fDeployClasses[Count].Required := StrToBool(Nodes.item[I].parentNode.attributes.getNamedItem('Required').nodeValue);
       // Get the RemoteDir, Operation, Extensions subnode values
       if Nodes.item[I].selectSingleNode('RemoteDir/node()') <> nil then
+      begin
         fDeployClasses[Count].RemoteDir := Nodes.item[I].selectSingleNode('RemoteDir/node()').nodeValue;
+        fDeployClasses[Count].RemoteDir := fDeployClasses[Count].RemoteDir.Replace('$(PROJECTNAME)', fProjectName)
+      end;
       if Nodes.item[I].selectSingleNode('Operation/node()') <> nil then
         fDeployClasses[Count].Operation := Nodes.item[I].selectSingleNode('Operation/node()').nodeValue;
       if Nodes.item[I].selectSingleNode('Extensions/node()') <> nil then
@@ -442,7 +521,10 @@ begin
     begin
       // Get the LocalName, Configuration, Class attributes of the DeployFiles node (the parent)
       if Nodes.item[I].parentNode.attributes.getNamedItem('LocalName') <> nil then
+      begin
         fDeployFiles[Count].LocalName     := Nodes.item[I].parentNode.attributes.getNamedItem('LocalName').nodeValue;
+        fDeployFiles[Count].LocalName := fDeployFiles[Count].LocalName.Replace('$(ProjectName)', fProjectName)
+      end;
       if Nodes.item[I].parentNode.attributes.getNamedItem('Configuration') <> nil then
         fDeployFiles[Count].Configuration := Nodes.item[I].parentNode.attributes.getNamedItem('Configuration').nodeValue;
       if Nodes.item[I].parentNode.attributes.getNamedItem('Class') <> nil then
@@ -453,7 +535,10 @@ begin
       else
         fDeployFiles[Count].Enabled := true;
       if Nodes.item[I].selectSingleNode('RemoteDir/node()') <> nil then
+      begin
         fDeployFiles[Count].RemoteDir := Nodes.item[I].selectSingleNode('RemoteDir/node()').nodeValue;
+        fDeployFiles[Count].RemoteDir := fDeployFiles[Count].RemoteDir.Replace('$(PROJECTNAME)', fProjectName);
+      end;
       if Nodes.item[I].selectSingleNode('RemoteName/node()') <> nil then
         fDeployFiles[Count].RemoteName := Nodes.item[I].selectSingleNode('RemoteName/node()').nodeValue;
       Inc(Count);
@@ -734,7 +819,7 @@ function TDeployer.PlatFormNeedsCodeSigning: Boolean;
 begin
   result := false;
   var p := Platform.ToUpper;
-  if p.Contains('OSX') or p.Contains('IOS64') then
+  if p.Contains('OSX') or p.Contains('IOSDEVICE64') then
     result := true;
 end;
 
@@ -745,5 +830,25 @@ begin
   if p.Contains('OSX') then
     result := true;
 end;
+
+
+procedure TDeployer.UploadToAppStore();
+begin
+  Writeln('Uploading project: ' + fProjectName);
+
+  if Platform <> 'iOSDevice64' then
+     raise Exception.Create('Uploading to store: platform not supported. Only iOSDevice64');
+
+  if AppleId = ''  then
+     raise Exception.Create('Uploading to store: Apple ID cannot be empty.');
+
+  if AppSpecificPassword = ''  then
+     raise Exception.Create('Uploading to store: App specific password cannot be empty.');
+
+  var script := string.Format('xcrun altool --upload-app --type ios -f %s.ipa -u "%s" -p "%s"', [fProjectName, AppleId, AppSpecificPassword]);
+  ExecuteCommand('', script, false);
+end;
+
+
 
 end.
