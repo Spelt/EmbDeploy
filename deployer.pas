@@ -276,8 +276,14 @@ begin
       Continue;
 
     var channel := tmpChannel as TPAClientChannel;
-    var script := channel.CreateNativeInstallerScript(fProjectRoot, fProjectName);
-    ExecuteCommand('', script);
+    if (not channel.CreateInstaller(fProjectName, fCertNameInstaller)) and (not fIgnoreErrors) then
+      if fLogExceptions then
+      begin
+        Writeln('Error in '+tmpChannel.ChannelName+'. Deployment stopped.');
+        Halt(1);
+      end
+      else
+        raise Exception.Create('Error in '+ tmpChannel.ChannelName+'. Deployment stopped.');
   end;
   fInstallerIsCreated := true;
 end;

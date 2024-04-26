@@ -75,9 +75,11 @@ type
     procedure CloseChannel;
     function CodeSignApp(const projectRoot, developerCertificateName, projectName:
         string): boolean;
-    function CodeSignInstaller(const projectRoot, developerCertificateName, projectName: string): boolean;
-    function CreateNativeInstallerScript(const projectRoot, projectName: string): string;
+    //function CodeSignInstaller(const projectRoot, developerCertificateName, projectName: string): boolean;
+    //function CreateNativeInstallerScript(const projectRoot, projectName: string): string;
     function RetrieveResult(const SepFiles, localFolder: string):boolean;
+    function CreateInstaller(const projectName,
+      devInstallerCert: string): boolean;
     function Notarize(const projectRoot, appleId, appSpecificPwEncoded,
       projectName, localPath, optionalNotarizationParam: string;
       projectType: TProjectType; const teamId: string): boolean;
@@ -231,18 +233,16 @@ begin
   result := CallPaclient(p);
 end;
 
-function TPAClientChannel.CodeSignInstaller(const projectRoot,
-    developerCertificateName, projectName: string): boolean;
+function TPAClientChannel.CreateInstaller(const projectName, devInstallerCert: string): boolean;
 begin
-  var sep := QuotedStr(developerCertificateName);
-  var p := Format(PACLIENT_CODE_SIGN_INST, [ProjectRoot, sep]);
-  result := CallPaclient(p);
-end;
 
-function TPAClientChannel.CreateNativeInstallerScript(const projectRoot, projectName: string): string;
-begin
-  result := string.Format('/usr/bin/pkgbuild --root "%s" --install-location "/Applications/%s" --identifier "%s" "%s.pkg"', [ProjectRoot, ProjectRoot, projectName, projectName]);
-  Writeln('Installer creation script: ' + result);
+  // Raw from pa client from ide. It creates an pkg from app and signs it.
+  //c:\program files (x86)\embarcadero\studio\23.0\bin\paclient.exe -u8 --productbuild="MyApp.app,/Applications,MyApp.pkg,'Developer ID
+  //Installer: MyCompany BV (FZRAYS6PHS)'" macPro-m2-Ed
+
+  var sep := QuotedStr(devInstallerCert);
+  var p := Format('--productbuild="%s.app,/Applications,%s.pkg,%s"', [ProjectName, ProjectName, sep]);
+  result := CallPaclient(p);
 end;
 
 function TPAClientChannel.Notarize(const projectRoot, appleId, appSpecificPwEncoded, projectName,

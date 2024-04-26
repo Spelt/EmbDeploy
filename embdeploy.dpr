@@ -194,9 +194,6 @@ begin
         Deployer.CreateInstallerProject();
         Writeln('Creating an installer complete');
 
-        Deployer.CodeSignInstaller();
-        Writeln('Codesigning installer complete');
-
         Deployer.NotarizeInstaller();
         Writeln('Notarizing installer complete');
       end;
